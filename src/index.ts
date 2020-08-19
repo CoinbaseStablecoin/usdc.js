@@ -1,3 +1,2 @@
-export function foo(): boolean {
-  return true;
-}
+export * from "./util";
+export * from "./wallet";
