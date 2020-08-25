@@ -1,8 +1,14 @@
-import { Network } from "../network";
+import { BlockHeight, Network } from "../network";
 import { decodeABIValue } from "../util/abi";
 import BN from "bn.js";
-import { ensureValidAddress } from "../util";
+import {
+  decimalStringFromBN,
+  ensureValidAddress,
+  isHexString,
+  strip0x,
+} from "../util";
 import { SELECTORS } from "./selectors";
+import { rawEncode } from "../vendor/ethereumjs-abi";
 
 /**
  * An ERC20 token
@@ -55,5 +61,38 @@ export class ERC20 {
     const symbol = decodeABIValue<string>("string", rawSymbol);
 
     return new ERC20(contractAddress, decimalPlaces, name, symbol, network);
+  }
+
+  /**
+   * Get balance of a given address
+   * @param address Ethereum address
+   * @param block (Default: "latest") Block height
+   * @returns Balance in a string containing a decimal number
+   */
+  public async balance(
+    address: string,
+    block: number | BlockHeight = BlockHeight.LATEST
+  ): Promise<string> {
+    if (!this.network) {
+      throw new Error("Network is null");
+    }
+    address = ensureValidAddress(address);
+
+    const result = await this.network.callRPC("eth_call", [
+      {
+        to: this.contractAddress,
+        data:
+          SELECTORS.balanceOf +
+          rawEncode(["address"], [address]).toString("hex"),
+      },
+      block,
+    ]);
+
+    if (!isHexString(result)) {
+      throw new Error("Invalid response");
+    }
+    const balance = new BN(strip0x(result), 16);
+
+    return decimalStringFromBN(balance, this.decimalPlaces);
   }
 }

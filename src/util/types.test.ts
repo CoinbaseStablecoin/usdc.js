@@ -1,3 +1,4 @@
+import BN from "bn.js";
 import * as types from "./types";
 
 test("isHexString", () => {
@@ -89,4 +90,38 @@ test("prepend0x", () => {
   expect(types.prepend0x("")).toEqual("0x");
   expect(types.prepend0x("0xcafebabe")).toEqual("0xcafebabe");
   expect(types.prepend0x("0x")).toEqual("0x");
+});
+
+test("decimalStringFromBN", () => {
+  expect(types.decimalStringFromBN(new BN("0"))).toEqual("0");
+  expect(types.decimalStringFromBN(new BN("0"), 1)).toEqual("0");
+  expect(types.decimalStringFromBN(new BN("1000000"))).toEqual("1000000");
+  expect(types.decimalStringFromBN(new BN("1000000"), 1)).toEqual("100000");
+  expect(types.decimalStringFromBN(new BN("1000001"), 1)).toEqual("100000.1");
+  expect(types.decimalStringFromBN(new BN("1000100"), 1)).toEqual("100010");
+  expect(types.decimalStringFromBN(new BN("1000000"), 2)).toEqual("10000");
+  expect(types.decimalStringFromBN(new BN("1000001"), 2)).toEqual("10000.01");
+  expect(types.decimalStringFromBN(new BN("1000100"), 2)).toEqual("10001");
+  expect(types.decimalStringFromBN(new BN("1000000"), 5)).toEqual("10");
+  expect(types.decimalStringFromBN(new BN("1000001"), 5)).toEqual("10.00001");
+  expect(types.decimalStringFromBN(new BN("1000100"), 5)).toEqual("10.001");
+  expect(types.decimalStringFromBN(new BN("1000000"), 6)).toEqual("1");
+  expect(types.decimalStringFromBN(new BN("1000001"), 6)).toEqual("1.000001");
+  expect(types.decimalStringFromBN(new BN("1000100"), 6)).toEqual("1.0001");
+  expect(types.decimalStringFromBN(new BN("1000000"), 7)).toEqual("0.1");
+  expect(types.decimalStringFromBN(new BN("1000001"), 7)).toEqual("0.1000001");
+  expect(types.decimalStringFromBN(new BN("1000100"), 7)).toEqual("0.10001");
+  expect(types.decimalStringFromBN(new BN("1000000"), 8)).toEqual("0.01");
+  expect(types.decimalStringFromBN(new BN("1000001"), 8)).toEqual("0.01000001");
+  expect(types.decimalStringFromBN(new BN("1000100"), 8)).toEqual("0.010001");
+  expect(types.decimalStringFromBN(new BN("1000000"), 10)).toEqual("0.0001");
+  expect(types.decimalStringFromBN(new BN("1000001"), 10)).toEqual(
+    "0.0001000001"
+  );
+  expect(types.decimalStringFromBN(new BN("1000100"), 10)).toEqual(
+    "0.00010001"
+  );
+  expect(types.decimalStringFromBN(new BN("3141592653589793238"), 18)).toEqual(
+    "3.141592653589793238"
+  );
 });

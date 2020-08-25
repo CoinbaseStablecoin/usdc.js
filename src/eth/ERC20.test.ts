@@ -1,3 +1,4 @@
+import BN from "bn.js";
 import nock from "nock";
 import { Network, ChainId } from "../network";
 import { InvalidAddressError } from "../util";
@@ -93,5 +94,45 @@ describe("ERC20", () => {
     await expect(
       ERC20.at("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", null)
     ).rejects.toThrow();
+  });
+
+  test("balance", async () => {
+    const responses: Record<string, string> = {
+      "0x70a08231000000000000000000000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa":
+        "0x" + new BN("1000000").toString(16),
+      "0x70a082310000000000000000000000001111111111111111111111111111111111111111":
+        "0x" + new BN("12345678").toString(16),
+    };
+    Object.entries(responses).forEach(([data, result]) => {
+      nock("https://example.com")
+        .matchHeader("content-type", "application/json")
+        .matchHeader("accept", "application/json")
+        .post("/", {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "eth_call",
+          params: [
+            { to: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", data },
+            "latest",
+          ],
+        })
+        .reply(200, { result });
+    });
+
+    const erc20 = new ERC20(
+      "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      6,
+      "USD Coin",
+      "USDC"
+    );
+
+    let bal = await erc20.balance("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa");
+    expect(bal).toEqual("1");
+
+    bal = await erc20.balance("0x1111111111111111111111111111111111111111");
+    expect(bal).toEqual("12.345678");
+
+    // Invalid address
+    await expect(erc20.balance("0x")).rejects.toThrow(InvalidAddressError);
   });
 });
