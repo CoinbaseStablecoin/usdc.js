@@ -38,6 +38,7 @@ module.exports = {
           "error",
           { ignoreVoid: true, ignoreIIFE: true },
         ],
+        "@typescript-eslint/no-explicit-any": "off",
       },
     },
     {
