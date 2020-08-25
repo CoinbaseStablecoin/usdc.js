@@ -1,7 +1,7 @@
 import { HDKey, Mnemonic } from "wallet.ts";
 import { randomBytes } from "crypto";
-import { hexStringFromBuffer, bufferFromHexString } from "../util/types";
 import { Account } from "./Account";
+import { hexStringFromBuffer, bufferFromHexString } from "../util";
 
 const VALID_MNEMONIC_WORD_COUNT = [12, 15, 18, 21, 24];
 
@@ -30,8 +30,8 @@ export function generateMnemonic(
  * accounts can be obtained from a single Wallet.
  */
 export class Wallet {
-  private readonly _hdKey: HDKey;
-  private readonly _accounts = new Map<number, Account>();
+  private readonly hdKey: HDKey;
+  private readonly accounts = new Map<number, Account>();
 
   /**
    * Constructor
@@ -39,7 +39,7 @@ export class Wallet {
    */
   public constructor(seed: string | Buffer) {
     const seedBuf = typeof seed === "string" ? bufferFromHexString(seed) : seed;
-    this._hdKey = HDKey.parseMasterSeed(seedBuf);
+    this.hdKey = HDKey.parseMasterSeed(seedBuf);
   }
 
   /**
@@ -61,14 +61,14 @@ export class Wallet {
    * @returns Account object
    */
   public getAccount(index = 0): Account {
-    let account = this._accounts.get(index);
+    let account = this.accounts.get(index);
     if (!account) {
-      const child = this._hdKey.derive(`m/44'/60'/0'/0/${index}`);
+      const child = this.hdKey.derive(`m/44'/60'/0'/0/${index}`);
       if (child.privateKey === null) {
         throw new Error("private key could not be derived");
       }
       account = new Account(child.privateKey, child.publicKey);
-      this._accounts.set(index, account);
+      this.accounts.set(index, account);
     }
     return account;
   }

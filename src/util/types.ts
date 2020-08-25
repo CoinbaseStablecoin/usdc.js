@@ -45,9 +45,27 @@ export function hexStringFromBuffer(buf: Buffer, addPrefix = true): string {
  * @returns Buffer object
  */
 export function bufferFromHexString(hex: string, varName?: string): Buffer {
-  let h = ensureHexString(hex, varName).replace(/^0x/, "");
+  let h = strip0x(ensureHexString(hex, varName));
   if (h.length % 2 !== 0) {
     h = "0" + h;
   }
   return Buffer.from(h, "hex");
+}
+
+/**
+ * Strip 0x prefix from a given string
+ * @param str String
+ * @returns String without 0x prefix
+ */
+export function strip0x(str: string): string {
+  return str.replace(/^0x/, "");
+}
+
+/**
+ * Add 0x prefix to a given string
+ * @param str String
+ * @returns String with 0x prefix
+ */
+export function prepend0x(str: string): string {
+  return str.replace(/^(0x)?/, "0x");
 }

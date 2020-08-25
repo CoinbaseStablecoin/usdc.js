@@ -1,5 +1,4 @@
 import * as types from "./types";
-import { bufferFromHexString } from "./types";
 
 test("isHexString", () => {
   ([
@@ -74,6 +73,20 @@ test("bufferFromHexString", () => {
   });
 
   ["0xcat", "cat", "0xf0od", "f0od"].forEach((t) => {
-    expect(() => bufferFromHexString(t)).toThrow(TypeError);
+    expect(() => types.bufferFromHexString(t)).toThrow(TypeError);
   });
+});
+
+test("strip0x", () => {
+  expect(types.strip0x("0x")).toEqual("");
+  expect(types.strip0x("0xcafebabe")).toEqual("cafebabe");
+  expect(types.strip0x("cafebabe")).toEqual("cafebabe");
+  expect(types.strip0x("")).toEqual("");
+});
+
+test("prepend0x", () => {
+  expect(types.prepend0x("cafebabe")).toEqual("0xcafebabe");
+  expect(types.prepend0x("")).toEqual("0x");
+  expect(types.prepend0x("0xcafebabe")).toEqual("0xcafebabe");
+  expect(types.prepend0x("0x")).toEqual("0x");
 });
