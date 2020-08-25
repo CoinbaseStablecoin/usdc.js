@@ -1,13 +1,20 @@
 import fetch from "isomorphic-unfetch";
-import { isValidAddress } from "../util";
+import { ensureValidAddress } from "../util";
 import { JSONRPCError, JSONRPCResponse } from "./types";
 
-enum ChainId {
+/** Chain ID mapping */
+export enum ChainId {
   MAINNET = 1,
   ROPSTEN = 3,
   RINKEBY = 4,
   KOVAN = 42,
   GOERLI = 5,
+}
+
+/** Block height constants */
+export enum BlockHeight {
+  LATEST = "latest",
+  PENDING = "pending",
 }
 
 export const DEFAULT_USDC_CONTRACTS: Record<number, string | undefined> = {
@@ -19,8 +26,8 @@ export const DEFAULT_USDC_CONTRACTS: Record<number, string | undefined> = {
  * An Ethereum network
  */
 export class Network {
-  /** Chain ID mapping */
   public static readonly ChainId = ChainId;
+  public static readonly BlockHeight = BlockHeight;
   /** Default network */
   public static default: Network | null = null;
 
@@ -38,10 +45,9 @@ export class Network {
     if (!usdcContractAddress) {
       usdcContractAddress = DEFAULT_USDC_CONTRACTS[chainId] || null;
     }
-    if (usdcContractAddress && !isValidAddress(usdcContractAddress)) {
-      throw new Error("Invalid USDC contract address");
+    if (usdcContractAddress) {
+      this.usdcContractAddress = ensureValidAddress(usdcContractAddress);
     }
-    this.usdcContractAddress = usdcContractAddress;
   }
 
   /**

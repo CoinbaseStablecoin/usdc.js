@@ -1,7 +1,8 @@
 import { Network } from "../network";
-import { decodeABIValue, functionSelector } from "../util/abi";
+import { decodeABIValue } from "../util/abi";
 import BN from "bn.js";
-import { isValidAddress } from "../util";
+import { ensureValidAddress } from "../util";
+import { SELECTORS } from "./selectors";
 
 /**
  * An ERC20 token
@@ -10,21 +11,19 @@ export class ERC20 {
   /**
    * Constructor
    * @param contractAddress Contract address
-   * @param decimals Number of decimal places
+   * @param decimalPlaces Number of decimal places
    * @param name (Default: null) Token name
    * @param symbol (Default: null) Token symbol
    * @param network (Default: Network.default) Network
    */
   public constructor(
     public readonly contractAddress: string,
-    public readonly decimals: number,
+    public readonly decimalPlaces: number,
     public readonly name: string | null = null,
     public readonly symbol: string | null = null,
     public readonly network: Network | null = Network.default
   ) {
-    if (!isValidAddress(contractAddress)) {
-      throw new Error("Invalid contract address");
-    }
+    this.contractAddress = ensureValidAddress(contractAddress);
   }
 
   /**
@@ -37,29 +36,24 @@ export class ERC20 {
     contractAddress: string,
     network: Network | null = Network.default
   ): Promise<ERC20> {
-    if (!isValidAddress(contractAddress)) {
-      throw new Error("Invalid contract address");
-    }
     if (!network) {
       throw new Error("Network must be provided");
     }
+    contractAddress = ensureValidAddress(contractAddress);
 
     const [rawDecimals, rawName, rawSymbol] = await Promise.all(
-      ["decimals()", "name()", "symbol()"].map((sel) =>
+      [SELECTORS.decimals, SELECTORS.name, SELECTORS.symbol].map((selector) =>
         network.callRPC("eth_call", [
-          {
-            to: contractAddress,
-            data: functionSelector(sel),
-          },
+          { to: contractAddress, data: selector },
           "latest",
         ])
       )
     );
 
-    const decimals = decodeABIValue<BN>("uint256", rawDecimals).toNumber();
+    const decimalPlaces = decodeABIValue<BN>("uint256", rawDecimals).toNumber();
     const name = decodeABIValue<string>("string", rawName);
     const symbol = decodeABIValue<string>("string", rawSymbol);
 
-    return new ERC20(contractAddress, decimals, name, symbol, network);
+    return new ERC20(contractAddress, decimalPlaces, name, symbol, network);
   }
 }

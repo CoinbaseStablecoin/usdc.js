@@ -1,5 +1,6 @@
 import nock from "nock";
-import { Network, DEFAULT_USDC_CONTRACTS } from "./Network";
+import { InvalidAddressError } from "../util";
+import { Network, ChainId, DEFAULT_USDC_CONTRACTS } from "./Network";
 import { JSONRPCError } from "./types";
 
 describe("Network", () => {
@@ -16,86 +17,80 @@ describe("Network", () => {
   test("constructor", () => {
     let network = new Network("https://example.com/");
     expect(network.ethereumRPCEndpoint).toEqual("https://example.com/");
-    expect(network.chainId).toEqual(Network.ChainId.MAINNET);
+    expect(network.chainId).toEqual(ChainId.MAINNET);
     expect(network.usdcContractAddress).toEqual(
-      DEFAULT_USDC_CONTRACTS[Network.ChainId.MAINNET]
+      DEFAULT_USDC_CONTRACTS[ChainId.MAINNET]
     );
 
-    network = new Network("https://example.com/", Network.ChainId.MAINNET);
+    network = new Network("https://example.com/", ChainId.MAINNET);
     expect(network.ethereumRPCEndpoint).toEqual("https://example.com/");
-    expect(network.chainId).toEqual(Network.ChainId.MAINNET);
+    expect(network.chainId).toEqual(ChainId.MAINNET);
     expect(network.usdcContractAddress).toEqual(
-      DEFAULT_USDC_CONTRACTS[Network.ChainId.MAINNET]
+      DEFAULT_USDC_CONTRACTS[ChainId.MAINNET]
     );
 
-    network = new Network("https://example.com/", Network.ChainId.ROPSTEN);
+    network = new Network("https://example.com/", ChainId.ROPSTEN);
     expect(network.ethereumRPCEndpoint).toEqual("https://example.com/");
-    expect(network.chainId).toEqual(Network.ChainId.ROPSTEN);
+    expect(network.chainId).toEqual(ChainId.ROPSTEN);
     expect(network.usdcContractAddress).toEqual(
-      DEFAULT_USDC_CONTRACTS[Network.ChainId.ROPSTEN]
+      DEFAULT_USDC_CONTRACTS[ChainId.ROPSTEN]
     );
 
     network = new Network(
       "https://example.com/",
-      Network.ChainId.ROPSTEN,
+      ChainId.ROPSTEN,
       "0x1111111111111111111111111111111111111111"
     );
     expect(network.ethereumRPCEndpoint).toEqual("https://example.com/");
-    expect(network.chainId).toEqual(Network.ChainId.ROPSTEN);
+    expect(network.chainId).toEqual(ChainId.ROPSTEN);
     expect(network.usdcContractAddress).toEqual(
       "0x1111111111111111111111111111111111111111"
     );
 
     expect(
-      () => new Network("https://example.com/", Network.ChainId.ROPSTEN, "0x")
-    ).toThrow();
+      () => new Network("https://example.com/", ChainId.ROPSTEN, "0x")
+    ).toThrow(InvalidAddressError);
   });
 
   test("setDefault", () => {
     let network = Network.setDefault("https://example.com/");
     expect(Network.default).toEqual(network);
     expect(network.ethereumRPCEndpoint).toEqual("https://example.com/");
-    expect(network.chainId).toEqual(Network.ChainId.MAINNET);
+    expect(network.chainId).toEqual(ChainId.MAINNET);
     expect(network.usdcContractAddress).toEqual(
-      DEFAULT_USDC_CONTRACTS[Network.ChainId.MAINNET]
+      DEFAULT_USDC_CONTRACTS[ChainId.MAINNET]
     );
 
-    network = Network.setDefault(
-      "https://example.com/",
-      Network.ChainId.MAINNET
-    );
+    network = Network.setDefault("https://example.com/", ChainId.MAINNET);
     expect(Network.default).toEqual(network);
     expect(network.ethereumRPCEndpoint).toEqual("https://example.com/");
-    expect(network.chainId).toEqual(Network.ChainId.MAINNET);
+    expect(network.chainId).toEqual(ChainId.MAINNET);
     expect(network.usdcContractAddress).toEqual(
-      DEFAULT_USDC_CONTRACTS[Network.ChainId.MAINNET]
+      DEFAULT_USDC_CONTRACTS[ChainId.MAINNET]
     );
 
-    network = Network.setDefault(
-      "https://example.com/",
-      Network.ChainId.ROPSTEN
-    );
+    network = Network.setDefault("https://example.com/", ChainId.ROPSTEN);
     expect(Network.default).toEqual(network);
     expect(network.ethereumRPCEndpoint).toEqual("https://example.com/");
-    expect(network.chainId).toEqual(Network.ChainId.ROPSTEN);
+    expect(network.chainId).toEqual(ChainId.ROPSTEN);
     expect(network.usdcContractAddress).toEqual(
-      DEFAULT_USDC_CONTRACTS[Network.ChainId.ROPSTEN]
+      DEFAULT_USDC_CONTRACTS[ChainId.ROPSTEN]
     );
 
     network = Network.setDefault(
       "https://example.com/",
-      Network.ChainId.ROPSTEN,
+      ChainId.ROPSTEN,
       "0x1111111111111111111111111111111111111111"
     );
     expect(Network.default).toEqual(network);
     expect(network.ethereumRPCEndpoint).toEqual("https://example.com/");
-    expect(network.chainId).toEqual(Network.ChainId.ROPSTEN);
+    expect(network.chainId).toEqual(ChainId.ROPSTEN);
     expect(network.usdcContractAddress).toEqual(
       "0x1111111111111111111111111111111111111111"
     );
 
     expect(() =>
-      Network.setDefault("https://example.com/", Network.ChainId.ROPSTEN, "0x")
+      Network.setDefault("https://example.com/", ChainId.ROPSTEN, "0x")
     ).toThrow();
   });
 
