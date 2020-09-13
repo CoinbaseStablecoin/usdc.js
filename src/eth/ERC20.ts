@@ -1,7 +1,8 @@
 import { BlockHeight, Network } from "../network";
-import { decodeABIValue } from "../util/abi";
 import BN from "bn.js";
 import {
+  bnFromDecimalString,
+  decodeABIValue,
   decimalStringFromBN,
   ensureValidAddress,
   isHexString,
@@ -9,10 +10,9 @@ import {
 } from "../util";
 import { SELECTORS } from "./selectors";
 import { rawEncode } from "../vendor/ethereumjs-abi";
+import { UnsignedTransaction } from "./UnsignedTransaction";
 
-/**
- * An ERC20 token
- */
+/** ERC20 token */
 export class ERC20 {
   /**
    * Constructor
@@ -37,6 +37,7 @@ export class ERC20 {
    * @param contractAddress Contract address
    * @param network (Default: Network.default) Network
    * @returns ERC20 object
+   * @throws InvalidAddressError
    */
   public static async at(
     contractAddress: string,
@@ -67,7 +68,8 @@ export class ERC20 {
    * Get balance of a given address
    * @param address Ethereum address
    * @param block (Default: "latest") Block height
-   * @returns Balance in a string containing a decimal number
+   * @returns Balance in a string representation of a decimal number
+   * @throws InvalidAddressError
    */
   public async balance(
     address: string,
@@ -94,5 +96,29 @@ export class ERC20 {
     const balance = new BN(strip0x(result), 16);
 
     return decimalStringFromBN(balance, this.decimalPlaces);
+  }
+
+  /**
+   * Create an unsigned Ethereum transaction to send tokens to another address
+   * @param recipientAddress Recipient's Ethereum address
+   * @param amount Amount to send in a string representation of a decimal number
+   * @returns Unsigned Ethereum transaction
+   * @throws InvalidAddressError
+   */
+  public createTransfer(
+    recipientAddress: string,
+    amount: string
+  ): UnsignedTransaction {
+    recipientAddress = ensureValidAddress(recipientAddress);
+    const value = bnFromDecimalString(amount, this.decimalPlaces);
+
+    return new UnsignedTransaction({
+      to: this.contractAddress,
+      data:
+        SELECTORS.transfer +
+        rawEncode(["address", "uint256"], [recipientAddress, value]).toString(
+          "hex"
+        ),
+    });
   }
 }

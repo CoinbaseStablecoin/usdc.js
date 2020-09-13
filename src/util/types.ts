@@ -73,11 +73,15 @@ export function prepend0x(str: string): string {
 }
 
 /**
- * Convert a BN to a decimal string
+ * Convert a BN object to a string representation of a positive decimal number
  * @param bn BN object
  * @param decimalPlaces Number of decimal places
+ * @returns String representation of a positive decimal number
  */
 export function decimalStringFromBN(bn: BN, decimalPlaces = 0): string {
+  if (bn.isNeg()) {
+    throw new Error("Number must be positive");
+  }
   if (bn.isZero()) {
     return "0";
   }
@@ -85,10 +89,38 @@ export function decimalStringFromBN(bn: BN, decimalPlaces = 0): string {
   if (decimalPlaces === 0) {
     return str;
   }
+
   str = str.slice(0, -decimalPlaces) + "." + str.slice(-decimalPlaces);
   str = str.replace(/\.0+$/, "");
   if (str.includes(".")) {
     str = str.replace(/0+$/, "");
   }
   return str;
+}
+
+/**
+ * Convert a string representation of a positive decimal number to BN object
+ * @param decimalNumber String representation of a positive decimal number
+ * @param decimalPlaces Number of decimal places
+ * @returns BN object
+ * @throws Error
+ */
+export function bnFromDecimalString(
+  decimalNumber: string,
+  decimalPlaces = 0
+): BN {
+  if (decimalNumber.startsWith("-")) {
+    throw new Error("Number must be positive");
+  }
+  if (!decimalNumber || !/^\d*(\.\d*)?$/.test(decimalNumber)) {
+    throw new Error("Invalid string representation of a decimal number");
+  }
+
+  let [whole, fractional] = decimalNumber.split(".");
+  whole = whole || "0";
+  fractional = (fractional || "0")
+    .slice(0, decimalPlaces)
+    .padEnd(decimalPlaces, "0");
+
+  return new BN(whole + fractional, 10);
 }

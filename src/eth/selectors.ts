@@ -3,4 +3,5 @@ export const SELECTORS = {
   name: "0x06fdde03",
   symbol: "0x95d89b41",
   balanceOf: "0x70a08231",
+  transfer: "0xa9059cbb",
 };

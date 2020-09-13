@@ -6,9 +6,18 @@ import { ERC20 } from "./ERC20";
 import { SELECTORS } from "./selectors";
 
 describe("ERC20", () => {
+  let erc20: ERC20;
+
   beforeEach(() => {
     nock.disableNetConnect();
     Network.setDefault("https://example.com/");
+
+    erc20 = new ERC20(
+      "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+      18,
+      "PeteCoin",
+      "PTC"
+    );
   });
 
   afterEach(() => {
@@ -19,7 +28,7 @@ describe("ERC20", () => {
   test("constructor", () => {
     // Default network, and no metadata
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    let erc20 = new ERC20("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", 6);
+    erc20 = new ERC20("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", 6);
     expect(erc20.contractAddress).toEqual(
       "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
     );
@@ -78,7 +87,7 @@ describe("ERC20", () => {
         .reply(200, { result });
     });
 
-    const erc20 = await ERC20.at("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
+    erc20 = await ERC20.at("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
     expect(erc20.contractAddress).toEqual(
       "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
     );
@@ -99,9 +108,9 @@ describe("ERC20", () => {
   test("balance", async () => {
     const responses: Record<string, string> = {
       "0x70a08231000000000000000000000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa":
-        "0x" + new BN("1000000").toString(16),
+        "0x" + new BN("1000000000000000000").toString(16),
       "0x70a082310000000000000000000000001111111111111111111111111111111111111111":
-        "0x" + new BN("12345678").toString(16),
+        "0x" + new BN("12345678000000000000").toString(16),
     };
     Object.entries(responses).forEach(([data, result]) => {
       nock("https://example.com")
@@ -112,19 +121,12 @@ describe("ERC20", () => {
           id: 1,
           method: "eth_call",
           params: [
-            { to: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", data },
+            { to: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", data },
             "latest",
           ],
         })
         .reply(200, { result });
     });
-
-    const erc20 = new ERC20(
-      "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-      6,
-      "USD Coin",
-      "USDC"
-    );
 
     let bal = await erc20.balance("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa");
     expect(bal).toEqual("1");
@@ -134,5 +136,41 @@ describe("ERC20", () => {
 
     // Invalid address
     await expect(erc20.balance("0x")).rejects.toThrow(InvalidAddressError);
+  });
+
+  test("createTransfer", () => {
+    let tx = erc20.createTransfer(
+      "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa",
+      "12.34"
+    );
+
+    expect(tx.to).toEqual(erc20.contractAddress);
+    expect(tx.wei).toEqual(new BN(0));
+    expect(tx.data.toString("hex")).toEqual(
+      "a9059cbb000000000000000000000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa000000000000000000000000000000000000000000000000ab407c9eb0520000"
+    );
+    expect(tx.nonce).toBe(null);
+    expect(tx.gasLimit).toBe(null);
+    expect(tx.gasPrice).toBe(null);
+
+    tx = erc20.createTransfer(
+      "0x1111111111111111111111111111111111111111",
+      ".00123"
+    );
+    expect(tx.to).toEqual(erc20.contractAddress);
+    expect(tx.data.toString("hex")).toEqual(
+      "a9059cbb000000000000000000000000111111111111111111111111111111111111111100000000000000000000000000000000000000000000000000045eadb112e000"
+    );
+    expect(tx.nonce).toBe(null);
+    expect(tx.gasLimit).toBe(null);
+    expect(tx.gasPrice).toBe(null);
+
+    // Invalid address
+    expect(() => erc20.createTransfer("0x", "1")).toThrow(InvalidAddressError);
+
+    // Invalid amount
+    expect(() => erc20.createTransfer("0x", "0x123")).toThrow(
+      InvalidAddressError
+    );
   });
 });

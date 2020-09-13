@@ -1,4 +1,5 @@
 import { EthereumAddress } from "wallet.ts";
+import { UnsignedTransaction } from "../eth";
 import { bufferFromHexString, hexStringFromBuffer } from "../util";
 
 /**
@@ -51,4 +52,11 @@ export class Account {
       ? this._address
       : (this._address = EthereumAddress.from(this._publicKey).address);
   }
+
+  /**
+   * Sign an Ethereum transaction
+   * @param tx Unsigned transaction
+   * @returns Signed transaction in hexadecimal string
+   */
+  public async sign(tx: UnsignedTransaction): Promise<string> {}
 }
