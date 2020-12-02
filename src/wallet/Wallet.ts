@@ -1,75 +1,147 @@
 import { HDKey, Mnemonic } from "wallet.ts";
 import { randomBytes } from "crypto";
 import { Account } from "./Account";
-import { hexStringFromBuffer, bufferFromHexString } from "../util";
+import { RPC } from "./RPC";
+import { ETH } from "./ETH";
+import { USDC } from "./USDC";
 
 const VALID_MNEMONIC_WORD_COUNT = [12, 15, 18, 21, 24];
-
-/**
- * Generate a new random mnemonic phrase
- * @param wordCount (Valid values: 12, 15, 18, 21, 24) Word count
- * @returns An object containing a mnemonic phrase and a hexadecimal master seed
- * ({ phrase, seed })
- */
-export function generateMnemonic(
-  wordCount: 12 | 15 | 18 | 21 | 24 = 12
-): { phrase: string; seed: string } {
-  if (!VALID_MNEMONIC_WORD_COUNT.includes(wordCount)) {
-    throw new Error("Invalid word count");
-  }
-  const entropy = randomBytes((wordCount * 4) / 3);
-  const mnemonic = Mnemonic.generate(entropy);
-  return {
-    phrase: mnemonic.phrase,
-    seed: hexStringFromBuffer(mnemonic.toSeed()),
-  };
-}
 
 /**
  * A wallet derived from a master seed or a mnemonic phrase. Any number of
  * accounts can be obtained from a single Wallet.
  */
 export class Wallet {
-  private readonly hdKey: HDKey;
-  private readonly accounts = new Map<number, Account>();
+  private readonly _hdKey: HDKey;
+  private readonly _recoveryPhrase: string | null = null;
+  private readonly _derivationPath: string;
+  private readonly _accountIndex: number;
+  private readonly _account: Account;
+  private readonly _rpc: RPC;
+  private readonly _eth: ETH;
+  private readonly _usdc: USDC;
 
-  /**
-   * Constructor
-   * @param seed Master seed
-   */
-  public constructor(seed: string | Buffer) {
-    const seedBuf = typeof seed === "string" ? bufferFromHexString(seed) : seed;
-    this.hdKey = HDKey.parseMasterSeed(seedBuf);
+  public static parse(
+    recoveryPhrase: string,
+    accountIndex = 0,
+    derivationPath?: string,
+    wordList?: string[]
+  ): Wallet {
+    return new Wallet({
+      recoveryPhrase,
+      accountIndex,
+      derivationPath,
+      wordList,
+    });
   }
 
   /**
-   * Create a Wallet object with a mnemonic phrase
-   * @param phrase Mnemonic phrase
-   * @returns Wallet object
+   * Generate a new random recovery phrase
+   * @param wordCount (Valid values: 12, 15, 18, 21, 24) Word count
+   * @param wordList
+   * @returns
    */
-  public static fromMnemonic(phrase: string): Wallet {
-    const mnemonic = Mnemonic.parse(phrase);
-    if (mnemonic === null) {
-      throw new Error("Invalid mnemonic phrase");
+  public static generate(
+    wordCount: 12 | 15 | 18 | 21 | 24 = 12,
+    derivationPath?: string,
+    wordList?: string[]
+  ): Wallet {
+    if (!VALID_MNEMONIC_WORD_COUNT.includes(wordCount)) {
+      throw new Error("Invalid word count");
     }
-    return new Wallet(mnemonic.toSeed());
+    const entropy = randomBytes((wordCount * 4) / 3);
+    const mnemonic = Mnemonic.generate(entropy, wordList);
+    return new Wallet({
+      seed: mnemonic,
+      accountIndex: 0,
+      derivationPath,
+      wordList,
+    });
   }
 
-  /**
-   * Derive an account
-   * @param index (Default: 0) Account index
-   * @returns Account object
-   */
-  public getAccount(index = 0): Account {
-    let account = this.accounts.get(index);
-    if (!account) {
-      const child = this.hdKey.derive(`m/44'/60'/0'/0/${index}`);
-      if (child.privateKey === null) {
-        throw new Error("private key could not be derived");
+  private constructor(params: {
+    seed?: HDKey | Mnemonic;
+    recoveryPhrase?: string | null;
+    accountIndex: number;
+    derivationPath?: string;
+    wordList?: string[];
+    rpcURL?: string;
+  }) {
+    const { seed, recoveryPhrase, accountIndex, wordList, rpcURL } = params;
+    const derivationPath = params.derivationPath ?? "m/44'/60'/0'/0";
+
+    if (seed instanceof HDKey) {
+      this._hdKey = seed;
+      if (typeof recoveryPhrase === "string") {
+        this._recoveryPhrase = recoveryPhrase;
       }
-      account = new Account(child.privateKey, child.publicKey);
-      this.accounts.set(index, account);
+    } else if (seed instanceof Mnemonic) {
+      this._hdKey = HDKey.parseMasterSeed(seed.toSeed());
+      this._recoveryPhrase = seed.phrase;
+    } else if (typeof recoveryPhrase === "string") {
+      const mnemonic = Mnemonic.parse(recoveryPhrase, wordList);
+      if (!mnemonic) {
+        throw new Error("Invalid recovery phrase");
+      }
+      this._hdKey = HDKey.parseMasterSeed(mnemonic.toSeed());
+      this._recoveryPhrase = mnemonic.phrase;
+    } else {
+      throw new Error("Either seed or recoveryPhrase must be provided");
     }
-    return account;
+
+    const child = this._hdKey.derive(`${derivationPath}/${accountIndex}`);
+    if (child.privateKey === null) {
+      throw new Error("private key could not be derived");
+    }
+
+    this._accountIndex = accountIndex;
+    this._derivationPath = derivationPath;
+    this._account = new Account(child.privateKey, child.publicKey);
+    this._rpc = new RPC(rpcURL);
+    this._eth = new ETH(this._account, this._rpc);
+    this._usdc = new USDC(this._account, this._rpc);
+  }
+
+  public get recoveryPhrase(): string | null {
+    return this._recoveryPhrase;
+  }
+
+  public get accountIndex(): number {
+    return this._accountIndex;
+  }
+
+  public get account(): Account {
+    return this._account;
+  }
+
+  public get rpc(): RPC {
+    return this._rpc;
+  }
+
+  public get address(): string {
+    return this._account.address;
+  }
+
+  public get eth(): ETH {
+    return this._eth;
+  }
+
+  public get usdc(): USDC {
+    return this._usdc;
+  }
+
+  public selectAccount(index: number): Wallet {
+    return new Wallet({
+      seed: this._hdKey,
+      recoveryPhrase: this._recoveryPhrase,
+      accountIndex: index,
+      derivationPath: this._derivationPath,
+      rpcURL: this._rpc.url,
+    });
+  }
+
+  public connect(rpcURL: string): Wallet {
+    this._rpc.url = rpcURL;
+    return this;
   }
 }
