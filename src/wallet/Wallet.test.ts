@@ -2,9 +2,9 @@
 
 import { Wallet } from "./Wallet";
 import { Mnemonic, EthereumAddress } from "wallet.ts";
-import { ETH } from "./ETH";
-import { USDC } from "./USDC";
-import { RPC } from "./RPC";
+import { ETH } from "./eth";
+import { USDC } from "./usdc";
+import { RPC } from "./rpc";
 
 describe("Wallet", () => {
   test("+generate", () => {

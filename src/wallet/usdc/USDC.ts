@@ -1,5 +1,5 @@
-import { RPC } from "./RPC";
-import { Account } from "./Account";
+import { RPC } from "../rpc";
+import { Account } from "../Account";
 
 export class USDC {
   private readonly _account: Account;

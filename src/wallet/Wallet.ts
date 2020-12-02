@@ -1,9 +1,9 @@
 import { HDKey, Mnemonic } from "wallet.ts";
 import { randomBytes } from "crypto";
 import { Account } from "./Account";
-import { RPC } from "./RPC";
-import { ETH } from "./ETH";
-import { USDC } from "./USDC";
+import { ETH } from "./eth";
+import { USDC } from "./usdc";
+import { RPC } from "./rpc";
 
 const VALID_MNEMONIC_WORD_COUNT = [12, 15, 18, 21, 24];
 
