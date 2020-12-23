@@ -10,10 +10,16 @@ export class USDC {
     this._rpc = rpc;
   }
 
+  /**
+   * Account object
+   */
   public get account(): Account {
     return this._account;
   }
 
+  /**
+   * RPC object
+   */
   public get rpc(): RPC {
     return this._rpc;
   }

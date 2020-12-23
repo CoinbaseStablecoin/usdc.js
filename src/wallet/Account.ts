@@ -10,8 +10,8 @@ export class Account {
   private _address?: string;
 
   /**
-   * Constructor. Most users should derive an Account with the `getAccount`
-   * method in Wallet class, instead of initializing an Account manually
+   * Constructor. Most users should derive an Account with the `selectAccount`
+   * method in Wallet class, instead of initializing an Account manually.
    * @param privateKey Private Key
    * @param publicKey Public Key
    */

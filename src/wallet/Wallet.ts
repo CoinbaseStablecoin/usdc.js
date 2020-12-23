@@ -21,6 +21,14 @@ export class Wallet {
   private readonly _eth: ETH;
   private readonly _usdc: USDC;
 
+  /**
+   * Instantiate a Wallet object with a given recovery prhase
+   * @param recoveryPhrase Recovery phrase
+   * @param accountIndex Account index (Default: 0)
+   * @param derivationPath HD wallet derivation path
+   * @param wordList Word list
+   * @returns Wallet object
+   */
   public static parse(
     recoveryPhrase: string,
     accountIndex = 0,
@@ -38,8 +46,9 @@ export class Wallet {
   /**
    * Generate a new random recovery phrase
    * @param wordCount (Valid values: 12, 15, 18, 21, 24) Word count
-   * @param wordList
-   * @returns
+   * @param derivationPath HD wallet derivation path
+   * @param wordList Word list
+   * @returns Wallet object
    */
   public static generate(
     wordCount: 12 | 15 | 18 | 21 | 24 = 12,
@@ -102,34 +111,60 @@ export class Wallet {
     this._usdc = new USDC(this._account, this._rpc);
   }
 
-  public get recoveryPhrase(): string | null {
+  /**
+   * Recovery phrase
+   */
+  public get recoveryPhrase(): string {
     return this._recoveryPhrase;
   }
 
+  /**
+   * Account index
+   */
   public get accountIndex(): number {
     return this._accountIndex;
   }
 
+  /**
+   * Account object
+   */
   public get account(): Account {
     return this._account;
   }
 
+  /**
+   * RPC object
+   */
   public get rpc(): RPC {
     return this._rpc;
   }
 
+  /**
+   * Address
+   */
   public get address(): string {
     return this._account.address;
   }
 
+  /**
+   * ETH object
+   */
   public get eth(): ETH {
     return this._eth;
   }
 
+  /**
+   * USDC object
+   */
   public get usdc(): USDC {
     return this._usdc;
   }
 
+  /**
+   * Instantiate a new Wallet object with a different account index
+   * @param index Account index
+   * @returns Wallet object
+   */
   public selectAccount(index: number): Wallet {
     return new Wallet({
       seed: this._hdKey,
@@ -140,6 +175,11 @@ export class Wallet {
     });
   }
 
+  /**
+   * Specify the RPC URL
+   * @param rpcURL RPC URL
+   * @returns This
+   */
   public connect(rpcURL: string): Wallet {
     this._rpc.url = rpcURL;
     return this;

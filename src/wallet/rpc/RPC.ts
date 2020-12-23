@@ -10,7 +10,7 @@ export class RPC {
    * @param params Parameters
    * @throws JSONRPCError
    * @throws Error
-   * @returns Result
+   * @returns A promise that resolves to the result returned by the RPC
    */
   public async callMethod<Params = any[], Result = any>(
     method: string,
