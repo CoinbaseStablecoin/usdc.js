@@ -73,7 +73,7 @@ describe("RPC", () => {
 
     // Result in JSON
     const rpc = new RPC("https://example.com/");
-    const result = await rpc.callMethod<[number], string>("eth_hello", [123]);
+    const result = await rpc.callMethod<string, [number]>("eth_hello", [123]);
     expect(result).toEqual("hi");
 
     // Error  inJSON

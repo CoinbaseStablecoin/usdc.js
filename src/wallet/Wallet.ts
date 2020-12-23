@@ -4,6 +4,8 @@ import { Account } from "./Account";
 import { ETH } from "./eth";
 import { USDC } from "./usdc";
 import { RPC } from "./rpc";
+import { ERC20 } from "./erc20";
+import { ensureValidAddress } from "../util";
 
 const VALID_MNEMONIC_WORD_COUNT = [12, 15, 18, 21, 24];
 
@@ -13,13 +15,14 @@ const VALID_MNEMONIC_WORD_COUNT = [12, 15, 18, 21, 24];
  */
 export class Wallet {
   private readonly _hdKey: HDKey;
-  private readonly _recoveryPhrase: string | null = null;
+  private readonly _recoveryPhrase: string;
   private readonly _derivationPath: string;
   private readonly _accountIndex: number;
   private readonly _account: Account;
   private readonly _rpc: RPC;
   private readonly _eth: ETH;
   private readonly _usdc: USDC;
+  private readonly _erc20s = new Map<string, ERC20>();
 
   /**
    * Instantiate a Wallet object with a given recovery prhase
@@ -70,7 +73,7 @@ export class Wallet {
 
   private constructor(params: {
     seed?: HDKey | Mnemonic;
-    recoveryPhrase?: string | null;
+    recoveryPhrase?: string;
     accountIndex: number;
     derivationPath?: string;
     wordList?: string[];
@@ -81,9 +84,7 @@ export class Wallet {
 
     if (seed instanceof HDKey) {
       this._hdKey = seed;
-      if (typeof recoveryPhrase === "string") {
-        this._recoveryPhrase = recoveryPhrase;
-      }
+      this._recoveryPhrase = recoveryPhrase || "";
     } else if (seed instanceof Mnemonic) {
       this._hdKey = HDKey.parseMasterSeed(seed.toSeed());
       this._recoveryPhrase = seed.phrase;
@@ -161,6 +162,22 @@ export class Wallet {
   }
 
   /**
+   * ERC20 object
+   * @param contractAddress ERC20 token contract address
+   * @param decimalPlaces Number of decimal places (leave black to fetch)
+   * @returns ERC20 object
+   */
+  public erc20(contractAddress: string, decimalPlaces?: number): ERC20 {
+    const addr = ensureValidAddress(contractAddress);
+    let e = this._erc20s.get(addr);
+    if (!e) {
+      e = new ERC20(this._account, this._rpc, addr, decimalPlaces);
+      this._erc20s.set(addr, e);
+    }
+    return e;
+  }
+
+  /**
    * Instantiate a new Wallet object with a different account index
    * @param index Account index
    * @returns Wallet object
@@ -181,7 +198,7 @@ export class Wallet {
    * @returns This
    */
   public connect(rpcURL: string): Wallet {
-    this._rpc.url = rpcURL;
+    this._rpc.setURL(rpcURL);
     return this;
   }
 }

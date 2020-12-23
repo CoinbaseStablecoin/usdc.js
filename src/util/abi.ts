@@ -1,6 +1,6 @@
 import { keccak256 } from "./hash";
 import { bufferFromHexString, hexStringFromBuffer } from "./types";
-import ABI from "../vendor/ethereumjs-abi";
+import * as ABI from "../vendor/ethereumjs-abi";
 
 /**
  * Derive a 4-byte function selector from a function signature
@@ -21,4 +21,17 @@ export function functionSelector(funcSig: string): string {
  */
 export function decodeABIValue<Value = any>(type: string, data: string): Value {
   return ABI.rawDecode<[Value]>([type], bufferFromHexString(data))[0];
+}
+
+/**
+ * Encode a given list of parameters in the ABI format
+ * @param types List of parameter types (e.g. ["uint256", "string"])
+ * @param params List of parameter values (e.g. [1, "foo"])
+ * @returns Encoded value in hexadecimal string
+ */
+export function encodeABIParameters<Params = any[]>(
+  types: string[],
+  params: Params
+): string {
+  return hexStringFromBuffer(ABI.rawEncode(types, params));
 }

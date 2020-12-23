@@ -1,6 +1,9 @@
 export function eventID(name: string, types: string[]): Buffer;
 export function methodID(name: string, types: string[]): Buffer;
-export function rawEncode<Values = any[]>(types: string[], values: T): Buffer;
+export function rawEncode<Values = any[]>(
+  types: string[],
+  values: Values
+): Buffer;
 export function rawDecode<Values = any[]>(
   types: string[],
   data: Buffer
