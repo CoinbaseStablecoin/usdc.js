@@ -55,6 +55,17 @@ export function bufferFromHexString(hex: string, varName?: string): Buffer {
 }
 
 /**
+ * Convert a whole number to a hexadecimal string
+ * @param num Number (integer)
+ * @param addPrefix (Default: true) If true, prepends the string with "0x"
+ * @returns Hexadecimal string
+ */
+export function hexStringFromNumber(num: number, addPrefix = true): string {
+  const hex = Math.floor(num).toString(16);
+  return addPrefix ? "0x" + hex : hex;
+}
+
+/**
  * Strip 0x prefix from a given string
  * @param str String
  * @returns String without 0x prefix
@@ -123,4 +134,15 @@ export function bnFromDecimalString(
     .padEnd(decimalPlaces, "0");
 
   return new BN(whole + fractional, 10);
+}
+
+/**
+ * Convert a block height to a valid string value
+ * @param height block height
+ * @returns A hexadecimal string, "latest" or "pending"
+ */
+export function stringFromBlockHeight(
+  height: number | "latest" | "pending" = "latest"
+): string {
+  return typeof height === "number" ? hexStringFromNumber(height) : height;
 }

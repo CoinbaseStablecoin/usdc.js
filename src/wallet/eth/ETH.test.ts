@@ -49,7 +49,7 @@ describe("ETH", () => {
         jsonrpc: "2.0",
         id: 1,
         method: "eth_getBalance",
-        params: [key1.addr, 12345678],
+        params: [key1.addr, "0xbc614e"],
       })
       .reply(200, { result: "0xde0b6b3a7640000" })
 
@@ -57,7 +57,7 @@ describe("ETH", () => {
         jsonrpc: "2.0",
         id: 1,
         method: "eth_getBalance",
-        params: [key2.addr, 12345678],
+        params: [key2.addr, "0xbc614e"],
       })
       .reply(200, { result: "0x16345785d8a0000" });
 

@@ -4,6 +4,7 @@ import {
   decodeABIValue,
   ensureValidAddress,
   decimalStringFromBN,
+  stringFromBlockHeight,
 } from "../../util";
 import type BN from "bn.js";
 
@@ -38,20 +39,29 @@ export class ETH {
 
   /**
    * Get account balance.
-   * @param params An object containing an address and optionally, the block
-   * height. Leave empty for this wallet's address.
+   * @param params Either an address or an object containing an address and
+   * optionally, the block height. Leave empty for this wallet's address.
    * @returns A promise that resolves to a string containing a decimal number
    */
   public async getBalance(
-    params: {
-      address?: string;
-      blockHeight?: number | "latest" | "pending";
-    } = {}
+    params:
+      | string
+      | {
+          address?: string;
+          blockHeight?: number | "latest" | "pending";
+        } = {}
   ): Promise<string> {
-    const address = params.address
-      ? ensureValidAddress(params.address)
-      : this._account.address;
-    const blockHeight = params.blockHeight ?? "latest";
+    let address: string;
+    let blockHeight: string;
+
+    if (typeof params === "string") {
+      address = params;
+      blockHeight = "latest";
+    } else {
+      address = params.address || this._account.address;
+      blockHeight = stringFromBlockHeight(params.blockHeight);
+    }
+    address = ensureValidAddress(address);
 
     const result = await this._rpc.callMethod("eth_getBalance", [
       address,
