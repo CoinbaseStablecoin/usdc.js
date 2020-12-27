@@ -110,6 +110,17 @@ export class Wallet {
     this._rpc = new RPC(rpcURL);
     this._eth = new ETH(this._account, this._rpc);
     this._usdc = new USDC(this._account, this._rpc);
+
+    Object.defineProperties(this, {
+      _hdKey: {
+        value: this._hdKey,
+        enumerable: false,
+      },
+      _recoveryPhrase: {
+        value: this._recoveryPhrase,
+        enumerable: false,
+      },
+    });
   }
 
   /**

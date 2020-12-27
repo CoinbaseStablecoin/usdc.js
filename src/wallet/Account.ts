@@ -7,7 +7,7 @@ import { bufferFromHexString, hexStringFromBuffer } from "../util";
 export class Account {
   private readonly _privateKey: Buffer;
   private readonly _publicKey: Buffer;
-  private _address?: string;
+  private readonly _address: string;
 
   /**
    * Constructor. Most users should derive an Account with the `selectAccount`
@@ -24,6 +24,22 @@ export class Account {
       typeof publicKey === "string"
         ? bufferFromHexString(publicKey, "publicKey")
         : publicKey;
+    this._address = EthereumAddress.from(this._publicKey).address;
+
+    Object.defineProperties(this, {
+      _privateKey: {
+        value: this._privateKey,
+        enumerable: false,
+      },
+      _publicKey: {
+        value: this._publicKey,
+        enumerable: false,
+      },
+      _address: {
+        value: this._address,
+        enumerable: true,
+      },
+    });
   }
 
   /**
@@ -47,8 +63,6 @@ export class Account {
    * @returns A mixed-case address
    */
   public get address(): string {
-    return this._address
-      ? this._address
-      : (this._address = EthereumAddress.from(this._publicKey).address);
+    return this._address;
   }
 }
