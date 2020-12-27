@@ -1,5 +1,7 @@
 import BN from "bn.js";
 
+export const ONE_ETHER = new BN("1000000000000000000", 10);
+
 /**
  * Checks whether a given string is a valid hexadecimal string
  * @param hex Hexadecimal string
@@ -14,18 +16,27 @@ export function isHexString(hex: string): boolean {
  * a TypeError
  * @param hex Hexadecimal string
  * @param varName Variable name to include in the error message
+ * @param addPrefix Adds prefix if true, strips if false
  * @throws TypeError
  * @returns Given hexadecimal string
  */
-export function ensureHexString(hex: string, varName?: string): string {
-  if (!isHexString(hex)) {
+export function ensureHexString(
+  hex: string,
+  varName?: string,
+  addPrefix = true
+): string {
+  let h = strip0x(hex);
+  if (!isHexString(h)) {
     throw new TypeError(
       varName
         ? `${varName} is not a valid hexadecimal string`
         : "Invalid hexadecimal string"
     );
   }
-  return hex;
+  if (h.length % 2 !== 0) {
+    h = "0" + h;
+  }
+  return addPrefix ? prepend0x(h) : strip0x(h);
 }
 
 /**
@@ -47,11 +58,22 @@ export function hexStringFromBuffer(buf: Buffer, addPrefix = true): string {
  * @returns Buffer object
  */
 export function bufferFromHexString(hex: string, varName?: string): Buffer {
-  let h = strip0x(ensureHexString(hex, varName));
-  if (h.length % 2 !== 0) {
-    h = "0" + h;
+  return Buffer.from(ensureHexString(hex, varName, false), "hex");
+}
+
+/**
+ * Convert a hexadecimal string to a number
+ * @param hex Hexadecimal string
+ * @throws RangeError
+ * @returns Integer
+ */
+export function numberFromHexString(hex: string): number {
+  const h = ensureHexString(hex, undefined, false);
+  const num = Number.parseInt(h, 16);
+  if (num > Number.MAX_SAFE_INTEGER) {
+    throw new RangeError("Number too large");
   }
-  return Buffer.from(h, "hex");
+  return num;
 }
 
 /**
@@ -120,12 +142,7 @@ export function bnFromDecimalString(
   decimalNumber: string,
   decimalPlaces = 0
 ): BN {
-  if (decimalNumber.startsWith("-")) {
-    throw new Error("Number must be positive");
-  }
-  if (!decimalNumber || !/^\d*(\.\d*)?$/.test(decimalNumber)) {
-    throw new Error("Invalid string representation of a decimal number");
-  }
+  ensurePositiveDecimalString(decimalNumber);
 
   let [whole, fractional] = decimalNumber.split(".");
   whole = whole || "0";
@@ -134,6 +151,23 @@ export function bnFromDecimalString(
     .padEnd(decimalPlaces, "0");
 
   return new BN(whole + fractional, 10);
+}
+
+/**
+ * Returns a given string if it contains a valid positive decimal number,
+ * otherwise throws a TypeError
+ * @param decimalNumber String representation of a positive decimal number
+ * @throws TypeError
+ * @returns Given string
+ */
+export function ensurePositiveDecimalString(decimalNumber: string): string {
+  if (decimalNumber.startsWith("-")) {
+    throw new TypeError("Number must be positive");
+  }
+  if (!decimalNumber || !/^\d*(\.\d*)?$/.test(decimalNumber)) {
+    throw new TypeError("Invalid string representation of a decimal number");
+  }
+  return decimalNumber;
 }
 
 /**

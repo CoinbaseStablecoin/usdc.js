@@ -4,3 +4,4 @@ export * from "./rpc";
 export * from "./eth";
 export * from "./erc20";
 export * from "./usdc";
+export * from "./Transaction";

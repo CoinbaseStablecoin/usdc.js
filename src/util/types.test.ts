@@ -25,19 +25,26 @@ test("isHexString", () => {
 
 test("ensureHexString", () => {
   [
-    "0xcafebabe",
-    "0xCaFe1234",
-    "0x1234",
-    "0xf00",
-    "0x1",
-    "0x",
-    "cafebabe",
-    "CaFe1234",
-    "1234",
-    "1",
-    "",
+    ["0xcafebabe", "cafebabe"],
+    ["0xCaFe1234", "CaFe1234"],
+    ["0x1234", "1234"],
+    ["0xf00", "0f00"],
+    ["0x1", "01"],
+    ["0x", ""],
+    ["cafebabe", "cafebabe"],
+    ["CaFe1234", "CaFe1234"],
+    ["1234", "1234"],
+    ["abc", "0abc"],
+    ["1", "01"],
+    ["", ""],
   ].forEach((t) => {
-    expect(types.ensureHexString(t)).toEqual(t);
+    expect(types.ensureHexString(t[0])).toEqual(types.prepend0x(t[1]));
+    expect(types.ensureHexString(t[0], undefined, true)).toEqual(
+      types.prepend0x(t[1])
+    );
+    expect(types.ensureHexString(t[0], undefined, false)).toEqual(
+      types.strip0x(t[1])
+    );
   });
 
   ["0xcat", "cat", "0xf0od", "f0od"].forEach((t) => {
