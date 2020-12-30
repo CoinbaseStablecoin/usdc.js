@@ -38,11 +38,17 @@ test("ensureHexString", () => {
     ["1", "01"],
     ["", ""],
   ].forEach((t) => {
-    expect(types.ensureHexString(t[0])).toEqual(types.prepend0x(t[1]));
-    expect(types.ensureHexString(t[0], undefined, true)).toEqual(
+    expect(types.ensureHexString(t[0])).toEqual(types.prepend0x(t[0]));
+    expect(types.ensureHexString(t[0], undefined, true, false)).toEqual(
+      types.prepend0x(t[0])
+    );
+    expect(types.ensureHexString(t[0], undefined, false, false)).toEqual(
+      types.strip0x(t[0])
+    );
+    expect(types.ensureHexString(t[0], undefined, true, true)).toEqual(
       types.prepend0x(t[1])
     );
-    expect(types.ensureHexString(t[0], undefined, false)).toEqual(
+    expect(types.ensureHexString(t[0], undefined, false, true)).toEqual(
       types.strip0x(t[1])
     );
   });

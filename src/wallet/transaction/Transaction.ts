@@ -6,8 +6,16 @@ import {
   ensureHexString,
   ONE_ETHER,
   decimalStringFromBN,
+  hexStringFromBN,
+  numberFromHexString,
+  bufferFromHexString,
+  bufferFromNumber,
+  bufferFromBN,
+  keccak256,
+  hexStringFromBuffer,
 } from "../../util";
 import BN from "bn.js";
+import * as rlp from "rlp";
 
 export class Transaction {
   private readonly _account: Account;
@@ -17,6 +25,7 @@ export class Transaction {
   private _gasLimit?: number;
   private _gasPrice?: BN;
   private _data?: string;
+  private _nonce?: number;
 
   /**
    * Constructor
@@ -253,7 +262,7 @@ export class Transaction {
   }
 
   /**
-   * Set the data. Throws an error is the given data is not a valid hexadecimal
+   * Set the data. Throws an error if the given data is not a valid hexadecimal
    * string.
    * @param data Data in hexadecimal string or null
    * @returns This
@@ -265,5 +274,85 @@ export class Transaction {
     }
     this._data = ensureHexString(data, undefined, true);
     return this;
+  }
+
+  /**
+   * Sets the nonce. Throws an error if an invalid value is given.
+   * @param nonce Nonce
+   * @returns This
+   */
+  public setNonce(nonce: number | null): Transaction {
+    if (nonce == null) {
+      this._nonce = undefined;
+      return this;
+    }
+    if (!Number.isInteger(nonce)) {
+      throw new Error("Nonce must be an integer");
+    }
+    this._nonce = nonce;
+    return this;
+  }
+
+  /**
+   * Estimate the gas usage of this transaction. It's a good idea to add a
+   * buffer to the number returned by this function.
+   * @returns Estimated gas usage
+   */
+  public async estimateGas(): Promise<number> {
+    const result = await this._rpc.callMethod("eth_estimateGas", [
+      {
+        from: this._account.address,
+        to: this._to,
+        value: this._value ? hexStringFromBN(this._value) : "0x0",
+        data: this.data,
+      },
+    ]);
+    return numberFromHexString(result);
+  }
+
+  /**
+   * Sign this transaction. If the nonce is not specified, uses the current
+   * confirmed transaction count. If the gas limit is not specified, it uses
+   * the estimated gas usage with a 50% buffer. If the gas price is not
+   * specified, uses the value returned by the node.
+   * @returns Signed transaction in a hexadecimal string
+   */
+  public async sign(): Promise<string> {
+    const chainId = await this._rpc.getChainId();
+
+    const nonce =
+      this._nonce ??
+      (await this._rpc.getTransactionCount(this._account.address));
+
+    const gasPrice = this._gasPrice || new BN(await this._rpc.getGasPrice());
+
+    let gasLimit: number;
+    if (this._gasLimit) {
+      gasLimit = this._gasLimit;
+    } else {
+      const gas = await this.estimateGas();
+      gasLimit = gas === 21000 ? gas : gas * 1.5;
+    }
+
+    const fields = [
+      bufferFromNumber(nonce), // 0: nonce
+      bufferFromBN(gasPrice), // 1: gas price
+      bufferFromNumber(gasLimit), // 2: gas limit
+      this._to ? bufferFromHexString(this._to) : Buffer.alloc(0), // 3: to
+      this._value ? bufferFromBN(this._value) : Buffer.alloc(0), // 4: value
+      this._data ? bufferFromHexString(this._data) : Buffer.alloc(0), // 5: data
+      bufferFromNumber(chainId), // 6: chainID
+      Buffer.alloc(0), // 7: 0
+      Buffer.alloc(0), // 8: 0
+    ];
+
+    const hash = keccak256(rlp.encode(fields));
+    const sig = await this._account.sign(hash);
+
+    fields[6] = bufferFromNumber(sig.v + chainId * 2 + 8); // 6: v
+    fields[7] = bufferFromHexString(sig.r); // 7: r
+    fields[8] = bufferFromHexString(sig.s); // 8: s
+
+    return hexStringFromBuffer(rlp.encode(fields));
   }
 }

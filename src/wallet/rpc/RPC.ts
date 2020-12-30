@@ -5,6 +5,8 @@ import {
   encodeABIParameters,
   decodeABIValue,
   stringFromBlockHeight,
+  ensureValidAddress,
+  numberFromHexString,
 } from "../../util";
 import BN from "bn.js";
 
@@ -17,7 +19,7 @@ export class RPC {
   /**
    * Constructor. Most users should use an instance of this class created by the
    * Wallet class.
-   * @param url RPC URL (Default: blank)
+   * @param url (Default: blank) RPC URL
    */
   public constructor(url = "") {
     this._url = url;
@@ -140,5 +142,34 @@ export class RPC {
     ]);
 
     return decodeABIValue<Result>(returnType, data);
+  }
+
+  /**
+   * Get the number of confirmed transactions sent from an address
+   * @param address Address
+   * @param blockHeight (Default: "latest") Block height
+   * @returns A promise object that resolves to the number of transactions
+   */
+  public async getTransactionCount(
+    address: string,
+    blockHeight: number | "latest" | "pending" = "latest"
+  ): Promise<number> {
+    ensureValidAddress(address);
+
+    const count = await this.callMethod("eth_getTransactionCount", [
+      address,
+      stringFromBlockHeight(blockHeight),
+    ]);
+
+    return numberFromHexString(count);
+  }
+
+  /**
+   * Get the current gas price
+   * @returns Gas price in wei
+   */
+  public async getGasPrice(): Promise<number> {
+    const result = await this.callMethod("eth_gasPrice", []);
+    return numberFromHexString(result);
   }
 }

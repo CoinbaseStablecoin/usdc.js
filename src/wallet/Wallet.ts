@@ -27,7 +27,7 @@ export class Wallet {
   /**
    * Instantiate a Wallet object with a given recovery prhase
    * @param recoveryPhrase Recovery phrase
-   * @param accountIndex Account index (Default: 0)
+   * @param accountIndex (Default: 0) Account index
    * @param derivationPath HD wallet derivation path
    * @param wordList Word list
    * @returns Wallet object
@@ -211,5 +211,18 @@ export class Wallet {
   public connect(rpcURL: string): Wallet {
     this._rpc.setURL(rpcURL);
     return this;
+  }
+
+  /**
+   * Get the number of confirmed transactions sent from an address
+   * @param address (Default: this account) Address
+   * @param blockHeight (Default: "latest") Block height
+   * @returns A promise object that resolves to the number of transactions
+   */
+  public async getTransactionCount(
+    address?: string,
+    blockHeight: number | "latest" | "pending" = "latest"
+  ): Promise<number> {
+    return this._rpc.getTransactionCount(address || this.address, blockHeight);
   }
 }

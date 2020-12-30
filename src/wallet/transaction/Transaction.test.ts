@@ -59,7 +59,7 @@ describe("Transaction", () => {
       expect(tx.gasLimit).toEqual(25000);
       expect(tx.gasPriceWei).toEqual(1337000000);
       expect(tx.gasPriceGwei).toEqual(1.337);
-      expect(tx.data).toEqual("0x0abc");
+      expect(tx.data).toEqual("0xabc");
     });
 
     test("throw if both weiValue and ethValue are given", () => {
@@ -192,7 +192,7 @@ describe("Transaction", () => {
 
   test("setData", () => {
     expect(tx.setData("0xabc")).toBe(tx);
-    expect(tx.data).toEqual("0x0abc");
+    expect(tx.data).toEqual("0xabc");
 
     expect(tx.setData("1234")).toBe(tx);
     expect(tx.data).toEqual("0x1234");

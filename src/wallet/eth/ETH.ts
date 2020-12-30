@@ -7,6 +7,7 @@ import {
   stringFromBlockHeight,
 } from "../../util";
 import type BN from "bn.js";
+import { Transaction } from "../transaction/Transaction";
 
 export class ETH {
   private readonly _account: Account;
@@ -69,5 +70,19 @@ export class ETH {
     ]);
 
     return decimalStringFromBN(decodeABIValue<BN>("uint256", result), 18);
+  }
+
+  /**
+   * Initialize a transaction to transfer ETH tokens.
+   * @param to Recipient address
+   * @param amount Amount in ether (e.g. "0.1")
+   */
+  public transfer(to: string, amount: string): Transaction {
+    return new Transaction({
+      account: this._account,
+      rpc: this._rpc,
+      to: to,
+      ethValue: amount,
+    });
   }
 }

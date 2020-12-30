@@ -16,14 +16,16 @@ export function isHexString(hex: string): boolean {
  * a TypeError
  * @param hex Hexadecimal string
  * @param varName Variable name to include in the error message
- * @param addPrefix Adds prefix if true, strips if false
+ * @param addPrefix (Default: true) Adds prefix if true, strips if false
+ * @param evenLength (Default: false) Always have even number of hex characters
  * @throws TypeError
  * @returns Given hexadecimal string
  */
 export function ensureHexString(
   hex: string,
   varName?: string,
-  addPrefix = true
+  addPrefix = true,
+  evenLength = false
 ): string {
   let h = strip0x(hex);
   if (!isHexString(h)) {
@@ -33,7 +35,7 @@ export function ensureHexString(
         : "Invalid hexadecimal string"
     );
   }
-  if (h.length % 2 !== 0) {
+  if (evenLength && h.length % 2 !== 0) {
     h = "0" + h;
   }
   return addPrefix ? prepend0x(h) : strip0x(h);
@@ -58,7 +60,29 @@ export function hexStringFromBuffer(buf: Buffer, addPrefix = true): string {
  * @returns Buffer object
  */
 export function bufferFromHexString(hex: string, varName?: string): Buffer {
-  return Buffer.from(ensureHexString(hex, varName, false), "hex");
+  return Buffer.from(ensureHexString(hex, varName, false, true), "hex");
+}
+
+/**
+ * Convert a whole number to a Buffer object
+ * @param num Number
+ * @throws TypeError
+ * @returns Buffer object
+ */
+export function bufferFromNumber(num: number): Buffer {
+  const hex = hexStringFromNumber(num, false);
+  return hex === "0" ? Buffer.alloc(0) : bufferFromHexString(hex);
+}
+
+/**
+ * Convert a BN object to a Buffer object.
+ * @param bn BN object
+ * @throws TypeError
+ * @returns Buffer object
+ */
+export function bufferFromBN(bn: BN): Buffer {
+  const hex = hexStringFromBN(bn, false);
+  return hex === "0" ? Buffer.alloc(0) : bufferFromHexString(hex);
 }
 
 /**
@@ -83,7 +107,10 @@ export function numberFromHexString(hex: string): number {
  * @returns Hexadecimal string
  */
 export function hexStringFromNumber(num: number, addPrefix = true): string {
-  const hex = Math.floor(num).toString(16);
+  if (!Number.isInteger(num)) {
+    throw new TypeError("Number must be an integer");
+  }
+  const hex = num.toString(16);
   return addPrefix ? "0x" + hex : hex;
 }
 
@@ -103,6 +130,20 @@ export function strip0x(str: string): string {
  */
 export function prepend0x(str: string): string {
   return str.replace(/^(0x)?/, "0x");
+}
+
+/**
+ * Convert a BN object to a hexadecimal string
+ * @param bn BN object
+ * @param addPrefix (Default: true) If true, prepends the string with "0x"
+ * @returns Hexadecimal string
+ */
+export function hexStringFromBN(bn: BN, addPrefix = true): string {
+  if (!BN.isBN(bn)) {
+    throw new TypeError("Given value is not a BN object");
+  }
+  const hex = bn.toString(16);
+  return addPrefix ? "0x" + hex : hex;
 }
 
 /**
