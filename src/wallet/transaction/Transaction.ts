@@ -16,6 +16,8 @@ import {
 } from "../../util";
 import BN from "bn.js";
 import * as rlp from "rlp";
+import { TransactionSubmission } from "./TransactionSubmission";
+import { JSONRPCError, TransactionReceipt } from "../rpc/types";
 
 export class Transaction {
   private readonly _account: Account;
@@ -354,5 +356,43 @@ export class Transaction {
     fields[8] = bufferFromHexString(sig.s); // 8: s
 
     return hexStringFromBuffer(rlp.encode(fields));
+  }
+
+  /**
+   * Sign and submit transaction
+   * @returns A promise that resolves to a TransactionSubmission object
+   */
+  public async submit(): Promise<TransactionSubmission> {
+    const signedTx = await this.sign();
+    const txHash = hexStringFromBuffer(keccak256(signedTx));
+
+    try {
+      await this._rpc.callMethod("eth_sendRawTransaction", [signedTx]);
+    } catch (err) {
+      if (
+        !(err instanceof JSONRPCError && err.message.match(/(known|imported)/i))
+      ) {
+        throw err;
+      }
+    }
+
+    return new TransactionSubmission(this._rpc, txHash);
+  }
+
+  /**
+   * Sign and submit transaction and poll for the transaction receipt
+   * @param ignoreError (Default: true) Ignore any network errors
+   * @param pollingInterval (Default: 5) Polling interval in seconds
+   * @param timeout (Default: 0) Timeout in seconds. No timeout if zero.
+   * @throws TimeoutError
+   * @returns A promise that resolves to a TransactionReceipt object
+   */
+  public async submitAndWaitForReceipt(
+    ignoreError = true,
+    pollingInterval = 5,
+    timeout = 0
+  ): Promise<TransactionReceipt> {
+    const submission = await this.submit();
+    return submission.waitForReceipt(ignoreError, pollingInterval, timeout);
   }
 }

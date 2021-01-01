@@ -1,4 +1,9 @@
-import { JSONRPCError, JSONRPCResponse } from "./types";
+import {
+  JSONRPCError,
+  JSONRPCResponse,
+  TransactionReceipt,
+  TimeoutError,
+} from "./types";
 import fetch from "isomorphic-unfetch";
 import {
   functionSelector,
@@ -7,6 +12,9 @@ import {
   stringFromBlockHeight,
   ensureValidAddress,
   numberFromHexString,
+  ensureHexString,
+  checksumAddress,
+  sleep,
 } from "../../util";
 import BN from "bn.js";
 
@@ -171,5 +179,121 @@ export class RPC {
   public async getGasPrice(): Promise<number> {
     const result = await this.callMethod("eth_gasPrice", []);
     return numberFromHexString(result);
+  }
+
+  /**
+   * Get the receipt for a given transaction
+   * @param txHash Transaction hash
+   * @returns A promise that resolves to a TransactionReceipt object or null if
+   * it is not available
+   */
+  public async getTransactionReceipt(
+    txHash: string
+  ): Promise<TransactionReceipt | null> {
+    ensureHexString(txHash);
+    if (txHash.length !== 66) {
+      throw new Error("Transaction hash must be 32 bytes long");
+    }
+
+    const r = await this.callMethod<{
+      blockHash: string;
+      blockNumber: string;
+      contractAddress: string | null;
+      cumulativeGasUsed: string;
+      from: string;
+      gasUsed: string;
+      logs: {
+        address: string;
+        blockHash: string;
+        blockNumber: string;
+        data: string;
+        logIndex: string;
+        removed: boolean;
+        topics: string[];
+        transactionHash: string;
+        transactionIndex: string;
+      }[];
+      logsBloom: string;
+      status: string;
+      to: string | null;
+      transactionHash: string;
+      transactionIndex: string;
+    } | null>("eth_getTransactionReceipt", [txHash]);
+
+    return r
+      ? {
+          transactionHash: r.transactionHash,
+          transactionIndex: numberFromHexString(r.transactionIndex),
+          blockNumber: numberFromHexString(r.blockNumber),
+          blockHash: r.blockHash,
+          from: checksumAddress(r.from),
+          to: r.to ? checksumAddress(r.to) : null,
+          cumulativeGasUsed: numberFromHexString(r.cumulativeGasUsed),
+          gasUsed: numberFromHexString(r.gasUsed),
+          contractAddress: r.contractAddress
+            ? checksumAddress(r.contractAddress)
+            : null,
+          logs: r.logs.map((log) => ({
+            logIndex: numberFromHexString(log.logIndex),
+            address: checksumAddress(log.address),
+            data: log.data,
+            topics: log.topics,
+          })),
+          logsBloom: r.logsBloom,
+          status: r.status === "0x1",
+        }
+      : null;
+  }
+
+  /**
+   * Poll for the transaction receipt
+   * @param transactionHash Transaction hash
+   * @param ignoreError (Default: true) Ignore any errors encountered while
+   * polling
+   * @param pollingInterval (Default: 5) Polling interval in seconds
+   * @param timeout (Default: 0) Timeout in seconds. No timeout if zero.
+   * @throws TimeoutError
+   * @returns A promise that resolves to a TransactionReceipt object
+   */
+  public async waitForReceipt(
+    txHash: string,
+    ignoreError = true,
+    pollingInterval = 5,
+    timeout = 0
+  ): Promise<TransactionReceipt> {
+    if (pollingInterval < 0) {
+      throw new Error("pollingInterval must not be a negative number");
+    }
+    if (timeout < 0) {
+      throw new Error("timeOut must not be a negative number");
+    }
+
+    let elapsed = 0;
+    const intervalMs = pollingInterval * 1000;
+
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      try {
+        const receipt = await this.getTransactionReceipt(txHash);
+        if (receipt) {
+          return receipt;
+        }
+      } catch (err) {
+        if (!ignoreError) {
+          throw err;
+        }
+      }
+
+      if (timeout > 0 && elapsed >= timeout) {
+        break;
+      }
+
+      await sleep(intervalMs);
+      elapsed += pollingInterval;
+    }
+
+    throw new TimeoutError(
+      "Timed out before a transaction receipt was available"
+    );
   }
 }

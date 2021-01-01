@@ -73,9 +73,21 @@ export class ETH {
   }
 
   /**
-   * Initialize a transaction to transfer ETH tokens.
-   * @param to Recipient address
+   * Create an empty transaction.
+   * @returns A Transaction object
+   */
+  public createTransaction(): Transaction {
+    return new Transaction({
+      account: this._account,
+      rpc: this._rpc,
+    });
+  }
+
+  /**
+   * Create a transaction to transfer Ether.
+   * @param to Recipient's address
    * @param amount Amount in ether (e.g. "0.1")
+   * @returns A Transaction object
    */
   public transfer(to: string, amount: string): Transaction {
     return new Transaction({
