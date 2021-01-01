@@ -27,11 +27,13 @@ export function decodeABIValue<Value = any>(type: string, data: string): Value {
  * Encode a given list of parameters in the ABI format
  * @param types List of parameter types (e.g. ["uint256", "string"])
  * @param params List of parameter values (e.g. [1, "foo"])
+ * @param addPrefix (Default: true) If true, prepends the string with "0x"
  * @returns Encoded value in hexadecimal string
  */
 export function encodeABIParameters<Params = any[]>(
   types: string[],
-  params: Params
+  params: Params,
+  addPrefix = true
 ): string {
-  return hexStringFromBuffer(ABI.rawEncode(types, params));
+  return hexStringFromBuffer(ABI.rawEncode(types, params), addPrefix);
 }

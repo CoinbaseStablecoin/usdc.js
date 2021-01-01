@@ -93,7 +93,7 @@ export class ETH {
     return new Transaction({
       account: this._account,
       rpc: this._rpc,
-      to: to,
+      to: ensureValidAddress(to),
       ethValue: amount,
     });
   }

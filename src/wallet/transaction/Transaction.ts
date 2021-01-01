@@ -28,6 +28,8 @@ export class Transaction {
   private _gasPrice?: BN;
   private _data?: string;
   private _nonce?: number;
+  private _toPromise?: Promise<string>;
+  private _dataPromise?: Promise<string>;
 
   /**
    * Constructor
@@ -37,12 +39,14 @@ export class Transaction {
     account: Account;
     rpc: RPC;
     to?: string;
+    toPromise?: Promise<string>;
     weiValue?: string;
     ethValue?: string;
     gasLimit?: number;
     gasPriceWei?: number;
     gasPriceGwei?: number;
     data?: string;
+    dataPromise?: Promise<string>;
   }) {
     this._account = params.account;
     this._rpc = params.rpc;
@@ -76,6 +80,12 @@ export class Transaction {
     }
     if (typeof params.data === "string") {
       this.setData(params.data);
+    }
+    if (params.toPromise instanceof Promise) {
+      this._toPromise = params.toPromise;
+    }
+    if (params.dataPromise instanceof Promise) {
+      this._dataPromise = params.dataPromise;
     }
   }
 
@@ -322,6 +332,16 @@ export class Transaction {
   public async sign(): Promise<string> {
     const chainId = await this._rpc.getChainId();
 
+    let to = this._to;
+    if (this._toPromise) {
+      to = ensureValidAddress(await this._toPromise);
+    }
+
+    let data = this._data;
+    if (this._dataPromise) {
+      data = ensureHexString(await this._dataPromise);
+    }
+
     const nonce =
       this._nonce ??
       (await this._rpc.getTransactionCount(this._account.address));
@@ -340,9 +360,9 @@ export class Transaction {
       bufferFromNumber(nonce), // 0: nonce
       bufferFromBN(gasPrice), // 1: gas price
       bufferFromNumber(gasLimit), // 2: gas limit
-      this._to ? bufferFromHexString(this._to) : Buffer.alloc(0), // 3: to
+      to ? bufferFromHexString(to) : Buffer.alloc(0), // 3: to
       this._value ? bufferFromBN(this._value) : Buffer.alloc(0), // 4: value
-      this._data ? bufferFromHexString(this._data) : Buffer.alloc(0), // 5: data
+      data ? bufferFromHexString(data) : Buffer.alloc(0), // 5: data
       bufferFromNumber(chainId), // 6: chainID
       Buffer.alloc(0), // 7: 0
       Buffer.alloc(0), // 8: 0

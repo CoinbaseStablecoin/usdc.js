@@ -144,7 +144,7 @@ export class RPC {
     const data = await this.callMethod<string>("eth_call", [
       {
         to: contractAddress,
-        data: sel + encodeABIParameters(types, params).slice(2),
+        data: sel + encodeABIParameters(types, params, false),
       },
       stringFromBlockHeight(blockHeight),
     ]);

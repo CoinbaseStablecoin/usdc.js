@@ -1,7 +1,14 @@
 import { RPC } from "../rpc";
 import { Account } from "../Account";
 import BN from "bn.js";
-import { ensureValidAddress, decimalStringFromBN } from "../../util";
+import {
+  ensureValidAddress,
+  decimalStringFromBN,
+  encodeABIParameters,
+  bnFromDecimalString,
+} from "../../util";
+import { Transaction } from "../transaction";
+import { SELECTORS } from "./selectors";
 
 export class ERC20 {
   protected readonly _account: Account;
@@ -64,13 +71,14 @@ export class ERC20 {
     let blockHeight: number | "latest" | "pending";
 
     if (typeof params === "string") {
-      address = params;
+      address = ensureValidAddress(params);
       blockHeight = "latest";
     } else {
-      address = params.address || this._account.address;
+      address = params.address
+        ? ensureValidAddress(params.address)
+        : this._account.address;
       blockHeight = params.blockHeight ?? "latest";
     }
-    address = ensureValidAddress(address);
 
     const result = await this._rpc.ethCall<BN>(
       contractAddress,
@@ -112,5 +120,33 @@ export class ERC20 {
       this.__decimalPlaces = decimals.toNumber();
     }
     return this.__decimalPlaces;
+  }
+
+  /**
+   * Create a transaction to transfer tokens.
+   * @param to Recipient's address
+   * @param amount Amount in decimal number (e.g. "0.1")
+   * @returns A Transaction object
+   */
+  public transfer(to: string, amount: string): Transaction {
+    const toAddr = ensureValidAddress(to);
+
+    const makeData = async (): Promise<string> => {
+      const decimals = await this.getDecimalPlaces();
+      return (
+        SELECTORS.transfer +
+        encodeABIParameters(
+          ["address", "uint256"],
+          [toAddr, bnFromDecimalString(amount, decimals)],
+          false
+        )
+      );
+    };
+    return new Transaction({
+      account: this._account,
+      rpc: this._rpc,
+      toPromise: this.getContractAddress(),
+      dataPromise: makeData(),
+    });
   }
 }
