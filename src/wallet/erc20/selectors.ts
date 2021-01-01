@@ -1,7 +1,5 @@
 export const SELECTORS = {
-  decimals: "0x313ce567",
-  name: "0x06fdde03",
-  symbol: "0x95d89b41",
-  balanceOf: "0x70a08231",
   transfer: "0xa9059cbb",
+  approve: "0x095ea7b3",
+  transferFrom: "0x23b872dd",
 };
