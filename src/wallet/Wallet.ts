@@ -71,16 +71,9 @@ export class Wallet {
     });
   }
 
-  private constructor(params: {
-    seed?: HDKey | Mnemonic;
-    recoveryPhrase?: string;
-    accountIndex: number;
-    derivationPath?: string;
-    wordList?: string[];
-    rpcURL?: string;
-  }) {
-    const { seed, recoveryPhrase, accountIndex, wordList, rpcURL } = params;
-    const derivationPath = params.derivationPath ?? "m/44'/60'/0'/0";
+  private constructor(options: WalletOptions) {
+    const { seed, recoveryPhrase, accountIndex, wordList, rpcURL } = options;
+    const derivationPath = options.derivationPath ?? "m/44'/60'/0'/0";
 
     if (seed instanceof HDKey) {
       this._hdKey = seed;
@@ -225,4 +218,13 @@ export class Wallet {
   ): Promise<number> {
     return this._rpc.getTransactionCount(address || this.address, blockHeight);
   }
+}
+
+export interface WalletOptions {
+  seed?: HDKey | Mnemonic;
+  recoveryPhrase?: string;
+  accountIndex: number;
+  derivationPath?: string;
+  wordList?: string[];
+  rpcURL?: string;
 }

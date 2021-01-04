@@ -40,27 +40,22 @@ export class ETH {
 
   /**
    * Get account balance.
-   * @param params Either an address or an object containing an address and
-   * optionally, the block height. Leave empty for this wallet's address.
+   * @param options Either an address or a GetBalanceOptions object. Leave blank
+   * to use this wallet's address
    * @returns A promise that resolves to a string containing a decimal number
    */
   public async getBalance(
-    params:
-      | string
-      | {
-          address?: string;
-          blockHeight?: number | "latest" | "pending";
-        } = {}
+    options: string | GetBalanceOptions = {}
   ): Promise<string> {
     let address: string;
     let blockHeight: string;
 
-    if (typeof params === "string") {
-      address = params;
+    if (typeof options === "string") {
+      address = options;
       blockHeight = "latest";
     } else {
-      address = params.address || this._account.address;
-      blockHeight = stringFromBlockHeight(params.blockHeight);
+      address = options.address || this._account.address;
+      blockHeight = stringFromBlockHeight(options.blockHeight);
     }
     address = ensureValidAddress(address);
 
@@ -97,4 +92,11 @@ export class ETH {
       ethValue: amount,
     });
   }
+}
+
+export interface GetBalanceOptions {
+  /** Address (Default: This wallet's address) */
+  address?: string;
+  /** Block height (Default: "latest") */
+  blockHeight?: number | "latest" | "pending";
 }

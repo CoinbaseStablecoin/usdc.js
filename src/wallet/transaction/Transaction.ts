@@ -33,59 +33,47 @@ export class Transaction {
 
   /**
    * Constructor
-   * @param params Transaction parameters
+   * @param options A TransactionOptions object
    */
-  public constructor(params: {
-    account: Account;
-    rpc: RPC;
-    to?: string;
-    toPromise?: Promise<string>;
-    weiValue?: string;
-    ethValue?: string;
-    gasLimit?: number;
-    gasPriceWei?: number;
-    gasPriceGwei?: number;
-    data?: string;
-    dataPromise?: Promise<string>;
-  }) {
-    this._account = params.account;
-    this._rpc = params.rpc;
+  public constructor(options: TransactionOptions) {
+    this._account = options.account;
+    this._rpc = options.rpc;
 
-    if (params.to) {
-      this.setTo(params.to);
+    if (options.to) {
+      this.setTo(options.to);
     }
-    if (params.weiValue && params.ethValue) {
+    if (options.weiValue && options.ethValue) {
       throw new Error("Cannot specify both weiValue and ethValue");
     }
-    if (typeof params.weiValue === "string") {
-      this.setWeiValue(params.weiValue);
+    if (typeof options.weiValue === "string") {
+      this.setWeiValue(options.weiValue);
     }
-    if (typeof params.ethValue === "string") {
-      this.setETHValue(params.ethValue);
+    if (typeof options.ethValue === "string") {
+      this.setETHValue(options.ethValue);
     }
-    if (typeof params.gasLimit === "number") {
-      this.setGasLimit(params.gasLimit);
+    if (typeof options.gasLimit === "number") {
+      this.setGasLimit(options.gasLimit);
     }
     if (
-      typeof params.gasPriceWei === "number" &&
-      typeof params.gasPriceGwei === "number"
+      typeof options.gasPriceWei === "number" &&
+      typeof options.gasPriceGwei === "number"
     ) {
       throw new Error("Cannot specify both gasPriceWei and gasPriceGwei");
     }
-    if (typeof params.gasPriceWei === "number") {
-      this.setGasPriceWei(params.gasPriceWei);
+    if (typeof options.gasPriceWei === "number") {
+      this.setGasPriceWei(options.gasPriceWei);
     }
-    if (typeof params.gasPriceGwei === "number") {
-      this.setGasPriceGwei(params.gasPriceGwei);
+    if (typeof options.gasPriceGwei === "number") {
+      this.setGasPriceGwei(options.gasPriceGwei);
     }
-    if (typeof params.data === "string") {
-      this.setData(params.data);
+    if (typeof options.data === "string") {
+      this.setData(options.data);
     }
-    if (params.toPromise instanceof Promise) {
-      this._toPromise = params.toPromise;
+    if (options.toPromise instanceof Promise) {
+      this._toPromise = options.toPromise;
     }
-    if (params.dataPromise instanceof Promise) {
-      this._dataPromise = params.dataPromise;
+    if (options.dataPromise instanceof Promise) {
+      this._dataPromise = options.dataPromise;
     }
   }
 
@@ -415,4 +403,29 @@ export class Transaction {
     const submission = await this.submit();
     return submission.waitForReceipt(ignoreError, pollingInterval, timeout);
   }
+}
+
+export interface TransactionOptions {
+  /** Account object */
+  account: Account;
+  /** RPC object */
+  rpc: RPC;
+  /** Recipient ("to") address */
+  to?: string;
+  /** A Promise object that resolves to the recipient ("to") address */
+  toPromise?: Promise<string>;
+  /** Value in wei as a string containing an integer */
+  weiValue?: string;
+  /** Value in ETH as a string containing a decimal number (e.g. "0.1") */
+  ethValue?: string;
+  /** Gas limit */
+  gasLimit?: number;
+  /** Gas price in wei */
+  gasPriceWei?: number;
+  /** Gas price in Gwei */
+  gasPriceGwei?: number;
+  /** Data as a hexadecimal string */
+  data?: string;
+  /** A Promise object that resolves to the data as a hexadecimal string */
+  dataPromise?: Promise<string>;
 }

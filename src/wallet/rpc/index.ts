@@ -1,1 +1,1 @@
-export { RPC } from "./RPC";
+export * from "./RPC";

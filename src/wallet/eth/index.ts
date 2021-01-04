@@ -1,1 +1,1 @@
-export { ETH } from "./ETH";
+export * from "./ETH";

@@ -9,6 +9,7 @@ import {
 } from "../../util";
 import { Transaction } from "../transaction";
 import { SELECTORS } from "./selectors";
+import { GetBalanceOptions } from "../eth";
 
 export class ERC20 {
   protected readonly _account: Account;
@@ -52,17 +53,12 @@ export class ERC20 {
 
   /**
    * Get account balance.
-   * @param params Either an address or an object containing an address and
-   * optionally, the block height. Leave empty for this wallet's address.
+   * @param options Either an address or a GetBalanceOptions object. Leave blank
+   * to use this wallet's address
    * @returns A promise that resolves to a string containing a decimal number
    */
   public async getBalance(
-    params:
-      | string
-      | {
-          address?: string;
-          blockHeight?: number | "latest" | "pending";
-        } = {}
+    options: string | GetBalanceOptions = {}
   ): Promise<string> {
     const contractAddress = await this.getContractAddress();
     const decimals = await this.getDecimalPlaces();
@@ -70,14 +66,14 @@ export class ERC20 {
     let address: string;
     let blockHeight: number | "latest" | "pending";
 
-    if (typeof params === "string") {
-      address = ensureValidAddress(params);
+    if (typeof options === "string") {
+      address = ensureValidAddress(options);
       blockHeight = "latest";
     } else {
-      address = params.address
-        ? ensureValidAddress(params.address)
+      address = options.address
+        ? ensureValidAddress(options.address)
         : this._account.address;
-      blockHeight = params.blockHeight ?? "latest";
+      blockHeight = options.blockHeight ?? "latest";
     }
 
     const result = await this._rpc.ethCall<BN>(
@@ -96,18 +92,11 @@ export class ERC20 {
   /**
    * Get the amount of tokens a given spender is allowed to spend on behalf of a
    * given owner. Leave owner unspecified to use this wallet's address.
-   * @param params Either the spender's address or an object containing the
-   * spender's address and optionally, the owner's address and the block height.
+   * @param options Either the spender's address or a GetAllowanceOptions object
    * @returns A promise that resolves to a string containing a decimal number
    */
   public async getAllowance(
-    params:
-      | string
-      | {
-          spender: string;
-          owner?: string;
-          blockHeight?: number | "latest" | "pending";
-        }
+    options: string | GetAllowanceOptions
   ): Promise<string> {
     const contractAddress = await this.getContractAddress();
     const decimals = await this.getDecimalPlaces();
@@ -116,16 +105,16 @@ export class ERC20 {
     let spender: string;
     let blockHeight: number | "latest" | "pending";
 
-    if (typeof params === "string") {
+    if (typeof options === "string") {
       owner = this._account.address;
-      spender = ensureValidAddress(params);
+      spender = ensureValidAddress(options);
       blockHeight = "latest";
     } else {
-      owner = params.owner
-        ? ensureValidAddress(params.owner)
+      owner = options.owner
+        ? ensureValidAddress(options.owner)
         : this._account.address;
-      spender = ensureValidAddress(params.spender);
-      blockHeight = params.blockHeight ?? "latest";
+      spender = ensureValidAddress(options.spender);
+      blockHeight = options.blockHeight ?? "latest";
     }
 
     const result = await this._rpc.ethCall<BN>(
@@ -263,4 +252,13 @@ export class ERC20 {
       dataPromise: makeData(),
     });
   }
+}
+
+export interface GetAllowanceOptions {
+  /** Spender's address */
+  spender: string;
+  /** Owner's address (Default: This wallet's address) */
+  owner?: string;
+  /** Block height (Default: "latest") */
+  blockHeight?: number | "latest" | "pending";
 }
