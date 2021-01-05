@@ -1,6 +1,10 @@
 import BN from "bn.js";
 
 export const ONE_ETHER = new BN("1000000000000000000", 10);
+export const MAX_UINT256 = new BN(
+  "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+  16
+);
 
 /**
  * Checks whether a given string is a valid hexadecimal string
@@ -27,6 +31,11 @@ export function ensureHexString(
   addPrefix = true,
   evenLength = false
 ): string {
+  if (typeof hex !== "string") {
+    throw new TypeError(
+      varName ? `${varName} is not a string` : "Given value is not a string"
+    );
+  }
   let h = strip0x(hex);
   if (!isHexString(h)) {
     throw new TypeError(

@@ -14,7 +14,7 @@ export class InvalidAddressError extends Error {
  * @returns True if valid
  */
 export function isValidAddress(address: string): boolean {
-  if (typeof address !== "string") {
+  if (!address) {
     return false;
   }
   return EthereumAddress.isValid(address);
@@ -27,7 +27,7 @@ export function isValidAddress(address: string): boolean {
  * @returns Checksum address
  */
 export function checksumAddress(address: string): string {
-  if (typeof address !== "string") {
+  if (!address) {
     throw new InvalidAddressError(address);
   }
   let checksumAddress: string;

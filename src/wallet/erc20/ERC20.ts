@@ -8,7 +8,7 @@ import {
   bnFromDecimalString,
 } from "../../util";
 import { Transaction } from "../transaction";
-import { SELECTORS } from "./selectors";
+import { ERC20_SELECTORS } from "./selectors";
 import { GetBalanceOptions } from "../eth";
 
 export class ERC20 {
@@ -171,7 +171,7 @@ export class ERC20 {
     const makeData = async (): Promise<string> => {
       const decimals = await this.getDecimalPlaces();
       return (
-        SELECTORS.transfer +
+        ERC20_SELECTORS.transfer +
         encodeABIParameters(
           ["address", "uint256"],
           [toAddr, bnFromDecimalString(amount, decimals)],
@@ -192,7 +192,7 @@ export class ERC20 {
    * Create a transaction to allow a given spender to spend a given amount of
    * tokens on one's behalf. (ERC20 approve function)
    * @param spender Spender's address
-   * @param allowance Allowed amount
+   * @param allowance Allowance amount in decimal number ("0.1")
    * @returns A Transaction object
    */
   public grantAllowance(spender: string, allowance: string): Transaction {
@@ -201,7 +201,7 @@ export class ERC20 {
     const makeData = async (): Promise<string> => {
       const decimals = await this.getDecimalPlaces();
       return (
-        SELECTORS.approve +
+        ERC20_SELECTORS.approve +
         encodeABIParameters(
           ["address", "uint256"],
           [spenderAddr, bnFromDecimalString(allowance, decimals)],
@@ -237,7 +237,7 @@ export class ERC20 {
     const makeData = async (): Promise<string> => {
       const decimals = await this.getDecimalPlaces();
       return (
-        SELECTORS.transferFrom +
+        ERC20_SELECTORS.transferFrom +
         encodeABIParameters(
           ["address", "address", "uint256"],
           [ownerAddr, toAddr, bnFromDecimalString(amount, decimals)],

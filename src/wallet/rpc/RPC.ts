@@ -52,6 +52,9 @@ export class RPC {
    * @param url RPC URL
    */
   public setURL(url: string): void {
+    if (this._url) {
+      throw new Error("The RPC URL cannot be changed once set");
+    }
     this._url = url;
     this.__chainId = undefined;
   }
@@ -64,10 +67,13 @@ export class RPC {
    * @throws Error
    * @returns A promise that resolves to the result returned by the RPC
    */
-  public async callMethod<Result = any, Params = any[]>(
+  public async callMethod<Result = any, Params extends any[] = any[]>(
     method: string,
     params: Params
   ): Promise<Result> {
+    if (!this._url) {
+      throw new Error("The RPC URL has not been set");
+    }
     const response = await fetch(this._url, {
       method: "POST",
       headers: {
@@ -121,10 +127,11 @@ export class RPC {
    * @param params List of parameter values (e.g. [1, "foo"])
    * @param returnType Return type (e.g. "uint256")
    * @param blockHeight Block height
-   * @param memoizeSelector Memoize function selector to make future calls faster
+   * @param memoizeSelector (Default: false) Memoize function selector to make
+   * repeated calls more efficient
    * @returns A promise that resolves to the result of the call
    */
-  public async ethCall<Result = any, Params = any[]>(
+  public async ethCall<Result = any, Params extends any[] = any[]>(
     contractAddress: string,
     funcSig: string,
     types: string[],

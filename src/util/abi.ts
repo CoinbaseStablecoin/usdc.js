@@ -30,7 +30,7 @@ export function decodeABIValue<Value = any>(type: string, data: string): Value {
  * @param addPrefix (Default: true) If true, prepends the string with "0x"
  * @returns Encoded value in hexadecimal string
  */
-export function encodeABIParameters<Params = any[]>(
+export function encodeABIParameters<Params extends any[] = any[]>(
   types: string[],
   params: Params,
   addPrefix = true

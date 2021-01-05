@@ -1,9 +1,22 @@
 import { RPC } from "../rpc";
 import { Account } from "../Account";
 import { ERC20 } from "../erc20";
+import BN from "bn.js";
+import {
+  eip712Hash,
+  ensureValidAddress,
+  bnFromDecimalString,
+  MAX_UINT256,
+  encodeABIParameters,
+  hexStringFromBuffer,
+  bufferFromHexString,
+} from "../../util";
+import { Transaction } from "../transaction";
+import { USDC_SELECTORS } from "./selectors";
 
 export class USDC extends ERC20 {
   private __chainId?: number;
+  private __domainSeparator?: string;
   private _contractAddressOverridden = false;
 
   /**
@@ -79,4 +92,172 @@ export class USDC extends ERC20 {
     }
     return this.__contractAddress;
   }
+
+  /**
+   * Get the next nonce for use with signPermit. The value returned by this
+   * function does not take unconfirmed permit transactions into account.
+   * @returns A promise that resolves to a number containing an integer
+   */
+  public async getNextPermitNonce(): Promise<number> {
+    const contractAddress = await this.getContractAddress();
+
+    const result = await this._rpc.ethCall<BN>(
+      contractAddress,
+      "nonces(address)",
+      ["address"],
+      [this._account.address],
+      "uint256",
+      "latest",
+      true
+    );
+
+    return result.toNumber();
+  }
+
+  /**
+   * Create a signed EIP-2612 permit that can be submitted to the blockchain by
+   * anyone on behalf of this account to grant an allowance
+   * @param options A SignPermitOptions object
+   * @returns A promise that resolves to a SignedPermit object
+   */
+  public async signPermit(options: SignPermitOptions): Promise<SignedPermit> {
+    const domainSeparator = await this.getDomainSeparator();
+    const decimals = await this.getDecimalPlaces();
+
+    const owner = this._account.address;
+    const spender = ensureValidAddress(options.spender);
+    const allowance = bnFromDecimalString(options.allowance, decimals);
+
+    let nonce: number;
+    if (typeof options.nonce !== "number") {
+      nonce = await this.getNextPermitNonce();
+    } else {
+      nonce = options.nonce;
+      if (!Number.isInteger(nonce) || nonce < 0) {
+        throw new Error("Nonce must be a positive integer");
+      }
+    }
+
+    const deadline: number | null =
+      options.deadline instanceof Date
+        ? Math.floor(options.deadline.getTime() / 1000)
+        : null;
+
+    const digest = eip712Hash(
+      domainSeparator,
+      "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)",
+      ["address", "address", "uint256", "uint256", "uint256"],
+      [owner, spender, allowance, nonce, deadline ?? MAX_UINT256]
+    );
+
+    const signature = await this._account.sign(digest);
+
+    return {
+      ...signature,
+      owner,
+      spender,
+      allowance: options.allowance,
+      nonce,
+      deadline,
+    };
+  }
+
+  /**
+   * Create a transaction to submit a signed EIP-2612 permit
+   * @param signedPermit A SignedPermit object returned by signPermit function
+   * @returns A Transaction object
+   */
+  public submitPermit(signedPermit: SignedPermit): Transaction {
+    const owner = ensureValidAddress(signedPermit.owner);
+    const spender = ensureValidAddress(signedPermit.spender);
+    const deadline = signedPermit.deadline ?? MAX_UINT256;
+    const { v } = signedPermit;
+    const r = bufferFromHexString(signedPermit.r);
+    const s = bufferFromHexString(signedPermit.s);
+
+    const makeData = async (): Promise<string> => {
+      const decimals = await this.getDecimalPlaces();
+      const value = bnFromDecimalString(signedPermit.allowance, decimals);
+
+      return (
+        USDC_SELECTORS.permit +
+        encodeABIParameters(
+          [
+            "address",
+            "address",
+            "uint256",
+            "uint256",
+            "uint8",
+            "bytes32",
+            "bytes32",
+          ],
+          [owner, spender, value, deadline, v, r, s],
+          false
+        )
+      );
+    };
+
+    return new Transaction({
+      account: this._account,
+      rpc: this._rpc,
+      toPromise: this.getContractAddress(),
+      dataPromise: makeData(),
+    });
+  }
+
+  /**
+   * Get the EIP-712 domain separator used by EIP-712 and EIP-3009
+   * @returns A promise that resolves to a hexadecimal string containing the
+   * domain separator
+   */
+  private async getDomainSeparator(): Promise<string> {
+    if (!this.__domainSeparator) {
+      const contractAddress = await this.getContractAddress();
+      const domainSeparator = await this._rpc.ethCall<Buffer>(
+        contractAddress,
+        "DOMAIN_SEPARATOR()",
+        [],
+        [],
+        "bytes32",
+        "latest",
+        false
+      );
+
+      if (!Buffer.isBuffer(domainSeparator) || domainSeparator.length !== 32) {
+        throw new Error("Contract did not return a valid domain separator");
+      }
+      this.__domainSeparator = hexStringFromBuffer(domainSeparator);
+    }
+    return this.__domainSeparator;
+  }
+}
+
+export interface SignPermitOptions {
+  /** Spender's address */
+  spender: string;
+  /** Allowance amount in decimal number (e.g. "0.1") */
+  allowance: string;
+  /** Nonce for the permit (Default: fetch next permit nonce) */
+  nonce?: number | null;
+  /** Deadline in unix time (Default: no deadline) */
+  deadline?: Date | null;
+}
+
+export interface SignedPermit {
+  /** Owner's address */
+  owner: string;
+  /** Spender's address */
+  spender: string;
+  /** Allowance amount in decimal number (e.g. "0.1") */
+  allowance: string;
+  /** Nonce for the permit */
+  nonce: number;
+  /** Deadline in unix time (Omit for no deadline) */
+  deadline?: number | null;
+  /** v of the signature */
+  v: number;
+  /** r of the signature as a hexadecimal string */
+  r: string;
+  /** s of the signature as a hexadecimal string */
+  s: string;
 }
