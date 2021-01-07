@@ -27,22 +27,16 @@ export function isHexString(hex: string): boolean {
  */
 export function ensureHexString(
   hex: string,
-  varName?: string,
+  varName = "Given value",
   addPrefix = true,
   evenLength = false
 ): string {
   if (typeof hex !== "string") {
-    throw new TypeError(
-      varName ? `${varName} is not a string` : "Given value is not a string"
-    );
+    throw new TypeError(`${varName} is not a string`);
   }
   let h = strip0x(hex);
   if (!isHexString(h)) {
-    throw new TypeError(
-      varName
-        ? `${varName} is not a valid hexadecimal string`
-        : "Invalid hexadecimal string"
-    );
+    throw new TypeError(`${varName} is not a valid hexadecimal string`);
   }
   if (evenLength && h.length % 2 !== 0) {
     h = "0" + h;
@@ -110,15 +104,13 @@ export function numberFromHexString(hex: string): number {
 }
 
 /**
- * Convert a whole number to a hexadecimal string
- * @param num Number (integer)
+ * Convert a positive integer to a hexadecimal string
+ * @param num Number (positive integer)
  * @param addPrefix (Default: true) If true, prepends the string with "0x"
  * @returns Hexadecimal string
  */
 export function hexStringFromNumber(num: number, addPrefix = true): string {
-  if (!Number.isInteger(num)) {
-    throw new TypeError("Number must be an integer");
-  }
+  ensurePositiveInteger(num);
   const hex = num.toString(16);
   return addPrefix ? "0x" + hex : hex;
 }
@@ -185,14 +177,16 @@ export function decimalStringFromBN(bn: BN, decimalPlaces = 0): string {
  * Convert a string representation of a positive decimal number to BN object
  * @param decimalNumber String representation of a positive decimal number
  * @param decimalPlaces Number of decimal places
+ * @param varName Variable name to include in the error message
  * @returns BN object
  * @throws Error
  */
 export function bnFromDecimalString(
   decimalNumber: string,
-  decimalPlaces = 0
+  decimalPlaces = 0,
+  varName?: string
 ): BN {
-  ensurePositiveDecimalString(decimalNumber);
+  ensurePositiveDecimalString(decimalNumber, varName);
 
   let [whole, fractional] = decimalNumber.split(".");
   whole = whole || "0";
@@ -204,20 +198,45 @@ export function bnFromDecimalString(
 }
 
 /**
- * Returns a given string if it contains a valid positive decimal number,
- * otherwise throws a TypeError
+ * Return a given string if it contains a valid positive decimal number,
+ * otherwise throw a TypeError
  * @param decimalNumber String representation of a positive decimal number
+ * @param varName Variable name to include in the error message
  * @throws TypeError
  * @returns Given string
  */
-export function ensurePositiveDecimalString(decimalNumber: string): string {
+export function ensurePositiveDecimalString(
+  decimalNumber: string,
+  varName = "Given value"
+): string {
   if (decimalNumber.startsWith("-")) {
-    throw new TypeError("Number must be positive");
+    throw new TypeError(`${varName} must be positive`);
   }
   if (!decimalNumber || !/^\d*(\.\d*)?$/.test(decimalNumber)) {
-    throw new TypeError("Invalid string representation of a decimal number");
+    throw new TypeError(`${varName} does not contain a valid decimal number`);
   }
   return decimalNumber;
+}
+
+/**
+ * Return a given number if it is a positive integer, otherwise throw a
+ * TypeError
+ * @param num Number
+ * @param varName Variable name to include in the error message
+ * @throws TypeError
+ * @returns Given number
+ */
+export function ensurePositiveInteger(
+  num: number,
+  varName = "Given value"
+): number {
+  if (!Number.isInteger(num)) {
+    throw new TypeError(`${varName} is not an integer`);
+  }
+  if (num < 0) {
+    throw new TypeError(`${varName} must be positive`);
+  }
+  return num;
 }
 
 /**
@@ -229,4 +248,16 @@ export function stringFromBlockHeight(
   height: number | "latest" | "pending" = "latest"
 ): string {
   return typeof height === "number" ? hexStringFromNumber(height) : height;
+}
+
+/**
+ * Convert a Date object to a UNIX timestamp in seconds
+ * @param date Date object
+ * @returns A number
+ */
+export function unixTimeFromDate(date: Date): number {
+  if (!(date instanceof Date)) {
+    throw new Error("Given value is not a Date object");
+  }
+  return Math.floor(date.getTime() / 1000);
 }

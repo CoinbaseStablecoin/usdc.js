@@ -71,7 +71,7 @@ export class ERC20 {
       blockHeight = "latest";
     } else {
       address = options.address
-        ? ensureValidAddress(options.address)
+        ? ensureValidAddress(options.address, "address")
         : this._account.address;
       blockHeight = options.blockHeight ?? "latest";
     }
@@ -111,9 +111,9 @@ export class ERC20 {
       blockHeight = "latest";
     } else {
       owner = options.owner
-        ? ensureValidAddress(options.owner)
+        ? ensureValidAddress(options.owner, "owner")
         : this._account.address;
-      spender = ensureValidAddress(options.spender);
+      spender = ensureValidAddress(options.spender, "spender");
       blockHeight = options.blockHeight ?? "latest";
     }
 
@@ -162,7 +162,7 @@ export class ERC20 {
   /**
    * Create a transaction to transfer tokens.
    * @param to Recipient's address
-   * @param amount Amount in decimal number (e.g. "0.1")
+   * @param amount Amount as a decimal number in a string (e.g. "0.1")
    * @returns A Transaction object
    */
   public transfer(to: string, amount: string): Transaction {
@@ -174,7 +174,7 @@ export class ERC20 {
         ERC20_SELECTORS.transfer +
         encodeABIParameters(
           ["address", "uint256"],
-          [toAddr, bnFromDecimalString(amount, decimals)],
+          [toAddr, bnFromDecimalString(amount, decimals, "amount")],
           false
         )
       );
@@ -192,7 +192,7 @@ export class ERC20 {
    * Create a transaction to allow a given spender to spend a given amount of
    * tokens on one's behalf. (ERC20 approve function)
    * @param spender Spender's address
-   * @param allowance Allowance amount in decimal number ("0.1")
+   * @param allowance Allowance amount as a decimal number in a string ("0.1")
    * @returns A Transaction object
    */
   public grantAllowance(spender: string, allowance: string): Transaction {
@@ -204,7 +204,7 @@ export class ERC20 {
         ERC20_SELECTORS.approve +
         encodeABIParameters(
           ["address", "uint256"],
-          [spenderAddr, bnFromDecimalString(allowance, decimals)],
+          [spenderAddr, bnFromDecimalString(allowance, decimals, "allowance")],
           false
         )
       );
@@ -223,7 +223,7 @@ export class ERC20 {
    * (ERc20 transferFrom function)
    * @param owner Owner's address
    * @param to Recipient's address
-   * @param amount Amount in decimal number (e.g. "0.1")
+   * @param amount Amount as a decimal number in a string (e.g. "0.1")
    * @returns A Transaction object
    */
   public spendAllowance(
@@ -231,8 +231,8 @@ export class ERC20 {
     to: string,
     amount: string
   ): Transaction {
-    const ownerAddr = ensureValidAddress(owner);
-    const toAddr = ensureValidAddress(to);
+    const ownerAddr = ensureValidAddress(owner, "owner");
+    const toAddr = ensureValidAddress(to, "to");
 
     const makeData = async (): Promise<string> => {
       const decimals = await this.getDecimalPlaces();
@@ -240,7 +240,7 @@ export class ERC20 {
         ERC20_SELECTORS.transferFrom +
         encodeABIParameters(
           ["address", "address", "uint256"],
-          [ownerAddr, toAddr, bnFromDecimalString(amount, decimals)],
+          [ownerAddr, toAddr, bnFromDecimalString(amount, decimals, "amount")],
           false
         )
       );

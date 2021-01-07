@@ -13,6 +13,7 @@ import {
   bufferFromBN,
   keccak256,
   hexStringFromBuffer,
+  ensurePositiveInteger,
 } from "../../util";
 import BN from "bn.js";
 import * as rlp from "rlp";
@@ -198,9 +199,7 @@ export class Transaction {
       this._gasLimit = undefined;
       return this;
     }
-    if (!Number.isInteger(gasLimit)) {
-      throw new Error("Gas limit must be an integer");
-    }
+    ensurePositiveInteger(gasLimit, "Gas limit");
     if (gasLimit < 21000) {
       throw new Error("Gas limit must be at least 21000");
     }
@@ -224,9 +223,7 @@ export class Transaction {
       this._gasPrice = undefined;
       return this;
     }
-    if (!Number.isInteger(gasPriceWei)) {
-      throw new Error("Gas price in wei must be an integer");
-    }
+    ensurePositiveInteger(gasPriceWei, "Gas price in wei");
     if (gasPriceWei < 0) {
       throw new Error("Gas price must be at least 0");
     }
@@ -286,9 +283,7 @@ export class Transaction {
       this._nonce = undefined;
       return this;
     }
-    if (!Number.isInteger(nonce)) {
-      throw new Error("Nonce must be an integer");
-    }
+    ensurePositiveInteger(nonce, "Nonce");
     this._nonce = nonce;
     return this;
   }

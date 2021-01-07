@@ -1,20 +1,12 @@
 import { EthereumAddress } from "wallet.ts";
 
-export class InvalidAddressError extends Error {
-  public constructor(public readonly address: unknown) {
-    super("Invalid address");
-    Object.setPrototypeOf(this, InvalidAddressError.prototype);
-    this.name = "InvalidAddressError";
-  }
-}
-
 /**
  * Checks the validity of an Ethereum address
  * @param address Ethereum address
  * @returns True if valid
  */
 export function isValidAddress(address: string): boolean {
-  if (!address) {
+  if (!address || typeof address !== "string") {
     return false;
   }
   return EthereumAddress.isValid(address);
@@ -23,18 +15,15 @@ export function isValidAddress(address: string): boolean {
 /**
  * Converts the Ethereum address to a mixed-case checksum address (EIP-55)
  * @param address Ethereum address
- * @throws InvalidAddressError
+ * @throws TypeError
  * @returns Checksum address
  */
 export function checksumAddress(address: string): string {
-  if (!address) {
-    throw new InvalidAddressError(address);
-  }
   let checksumAddress: string;
   try {
     checksumAddress = EthereumAddress.checksumAddress(address);
   } catch {
-    throw new InvalidAddressError(address);
+    throw new TypeError("Given value is not a valid address");
   }
   return checksumAddress;
 }
@@ -43,12 +32,16 @@ export function checksumAddress(address: string): string {
  * Checks the validity of an Ethereum address, returns a checksum address if
  * the address is valid, and throws otherwise
  * @param address Ethereum address
- * @throws InvalidAddressError
+ * @param varName Variable name to include in the error message
+ * @throws TypeError
  * @returns Checksum address
  */
-export function ensureValidAddress(address: string): string {
+export function ensureValidAddress(
+  address: string,
+  varName = "Given value"
+): string {
   if (!isValidAddress(address)) {
-    throw new InvalidAddressError(address);
+    throw new TypeError(`${varName} is not a valid address`);
   }
   return checksumAddress(address);
 }

@@ -51,13 +51,14 @@ export class ETH {
     let blockHeight: string;
 
     if (typeof options === "string") {
-      address = options;
+      address = ensureValidAddress(options);
       blockHeight = "latest";
     } else {
-      address = options.address || this._account.address;
+      address = options.address
+        ? ensureValidAddress(options.address, "address")
+        : this._account.address;
       blockHeight = stringFromBlockHeight(options.blockHeight);
     }
-    address = ensureValidAddress(address);
 
     const result = await this._rpc.callMethod("eth_getBalance", [
       address,

@@ -45,27 +45,17 @@ test("ensureValidAddress", () => {
 
   expect(() =>
     address.ensureValidAddress("0xAAAAAAAAAAAAAAAAAAaaaaaaaaaaaaaaaaaaaaaa")
-  ).toThrow(address.InvalidAddressError);
+  ).toThrow(TypeError);
 
-  expect(() => address.ensureValidAddress("")).toThrow(
-    address.InvalidAddressError
-  );
-  expect(() => address.ensureValidAddress("0x")).toThrow(
-    address.InvalidAddressError
-  );
+  expect(() => address.ensureValidAddress("")).toThrow(TypeError);
+  expect(() => address.ensureValidAddress("0x")).toThrow(TypeError);
   expect(() =>
     address.ensureValidAddress("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabb")
-  ).toThrow(address.InvalidAddressError);
+  ).toThrow(TypeError);
 
-  expect(() => address.ensureValidAddress(undefined as any)).toThrow(
-    address.InvalidAddressError
-  );
-  expect(() => address.ensureValidAddress(null as any)).toThrow(
-    address.InvalidAddressError
-  );
-  expect(() => address.ensureValidAddress(123 as any)).toThrow(
-    address.InvalidAddressError
-  );
+  expect(() => address.ensureValidAddress(undefined as any)).toThrow(TypeError);
+  expect(() => address.ensureValidAddress(null as any)).toThrow(TypeError);
+  expect(() => address.ensureValidAddress(123 as any)).toThrow(TypeError);
 });
 
 test("checksumAddress", () => {
@@ -79,20 +69,10 @@ test("checksumAddress", () => {
     address.checksumAddress("0x33907bb48ad33ac84c2dc904715ff36facfe81a3")
   ).toEqual("0x33907bB48AD33aC84C2dC904715FF36faCfe81a3");
 
-  expect(() => address.checksumAddress("")).toThrow(
-    address.InvalidAddressError
-  );
-  expect(() => address.checksumAddress("0x")).toThrow(
-    address.InvalidAddressError
-  );
+  expect(() => address.checksumAddress("")).toThrow(TypeError);
+  expect(() => address.checksumAddress("0x")).toThrow(TypeError);
 
-  expect(() => address.checksumAddress(undefined as any)).toThrow(
-    address.InvalidAddressError
-  );
-  expect(() => address.checksumAddress(null as any)).toThrow(
-    address.InvalidAddressError
-  );
-  expect(() => address.checksumAddress(123 as any)).toThrow(
-    address.InvalidAddressError
-  );
+  expect(() => address.checksumAddress(undefined as any)).toThrow(TypeError);
+  expect(() => address.checksumAddress(null as any)).toThrow(TypeError);
+  expect(() => address.checksumAddress(123 as any)).toThrow(TypeError);
 });

@@ -10,9 +10,13 @@ import {
   encodeABIParameters,
   hexStringFromBuffer,
   bufferFromHexString,
+  unixTimeFromDate,
+  ensureHexString,
+  ensurePositiveInteger,
 } from "../../util";
 import { Transaction } from "../transaction";
 import { USDC_SELECTORS } from "./selectors";
+import { randomBytes } from "crypto";
 
 export class USDC extends ERC20 {
   private __chainId?: number;
@@ -125,29 +129,28 @@ export class USDC extends ERC20 {
     const decimals = await this.getDecimalPlaces();
 
     const owner = this._account.address;
-    const spender = ensureValidAddress(options.spender);
-    const allowance = bnFromDecimalString(options.allowance, decimals);
+    const spender = ensureValidAddress(options.spender, "spender");
+    const allowance = bnFromDecimalString(
+      options.allowance,
+      decimals,
+      "allowance"
+    );
 
-    let nonce: number;
-    if (typeof options.nonce !== "number") {
-      nonce = await this.getNextPermitNonce();
-    } else {
-      nonce = options.nonce;
-      if (!Number.isInteger(nonce) || nonce < 0) {
-        throw new Error("Nonce must be a positive integer");
-      }
-    }
+    const nonce: number =
+      typeof options.nonce === "number"
+        ? ensurePositiveInteger(options.nonce, "Nonce")
+        : await this.getNextPermitNonce();
 
-    const deadline: number | null =
-      options.deadline instanceof Date
-        ? Math.floor(options.deadline.getTime() / 1000)
-        : null;
+    const deadline: number | BN = options.deadline
+      ? unixTimeFromDate(options.deadline)
+      : MAX_UINT256;
 
     const digest = eip712Hash(
       domainSeparator,
       "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)",
       ["address", "address", "uint256", "uint256", "uint256"],
-      [owner, spender, allowance, nonce, deadline ?? MAX_UINT256]
+      [owner, spender, allowance, nonce, deadline],
+      true
     );
 
     const signature = await this._account.sign(digest);
@@ -158,7 +161,7 @@ export class USDC extends ERC20 {
       spender,
       allowance: options.allowance,
       nonce,
-      deadline,
+      deadline: options.deadline,
     };
   }
 
@@ -168,16 +171,22 @@ export class USDC extends ERC20 {
    * @returns A Transaction object
    */
   public submitPermit(signedPermit: SignedPermit): Transaction {
-    const owner = ensureValidAddress(signedPermit.owner);
-    const spender = ensureValidAddress(signedPermit.spender);
-    const deadline = signedPermit.deadline ?? MAX_UINT256;
+    const owner = ensureValidAddress(signedPermit.owner, "owner");
+    const spender = ensureValidAddress(signedPermit.spender, "spender");
+    const deadline: number | BN = signedPermit.deadline
+      ? unixTimeFromDate(signedPermit.deadline)
+      : MAX_UINT256;
     const { v } = signedPermit;
     const r = bufferFromHexString(signedPermit.r);
     const s = bufferFromHexString(signedPermit.s);
 
     const makeData = async (): Promise<string> => {
       const decimals = await this.getDecimalPlaces();
-      const value = bnFromDecimalString(signedPermit.allowance, decimals);
+      const value = bnFromDecimalString(
+        signedPermit.allowance,
+        decimals,
+        "allowance"
+      );
 
       return (
         USDC_SELECTORS.permit +
@@ -192,6 +201,112 @@ export class USDC extends ERC20 {
             "bytes32",
           ],
           [owner, spender, value, deadline, v, r, s],
+          false
+        )
+      );
+    };
+
+    return new Transaction({
+      account: this._account,
+      rpc: this._rpc,
+      toPromise: this.getContractAddress(),
+      dataPromise: makeData(),
+    });
+  }
+
+  /**
+   * Create a signed EIP-3009 transfer authorization that can be submitted by
+   * anyone on behalf of this account to transfer tokens
+   * @param options A SignTransferAuthorizationOptions object
+   * @returns A promise that resolves to a SignedTransferAuthorization object
+   */
+  public async signTransferAuthorization(
+    options: SignTransferAuthorizationOptions
+  ): Promise<SignedTransferAuthorization> {
+    const domainSeparator = await this.getDomainSeparator();
+    const decimals = await this.getDecimalPlaces();
+
+    const from = this._account.address;
+    const to = ensureValidAddress(options.to);
+    const amount = bnFromDecimalString(options.amount, decimals, "amount");
+
+    const validAfter = options.validAfter
+      ? unixTimeFromDate(options.validAfter)
+      : 0;
+    const validBefore: number | BN = options.validBefore
+      ? unixTimeFromDate(options.validBefore)
+      : MAX_UINT256;
+
+    const nonce: Buffer = options.nonce
+      ? Buffer.from(ensureHexString(options.nonce), "hex")
+      : randomBytes(32);
+
+    const digest = eip712Hash(
+      domainSeparator,
+      "TransferWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)",
+      ["address", "address", "uint256", "uint256", "uint256", "bytes32"],
+      [from, to, amount, validAfter, validBefore, nonce],
+      true
+    );
+
+    const signature = await this._account.sign(digest);
+
+    return {
+      ...signature,
+      from,
+      to,
+      amount: options.amount,
+      validAfter: options.validAfter,
+      validBefore: options.validBefore,
+      nonce: hexStringFromBuffer(nonce),
+    };
+  }
+
+  /**
+   * Create a transaction to submit a signed EIP-3009 transfer authorization
+   * @param signedAuthorization A SignedTransferAuthorization object returned by
+   * signTransferAuthorization function
+   * @returns A Transaction object
+   */
+  public submitTransferAuthorization(
+    signedAuthorization: SignedTransferAuthorization
+  ): Transaction {
+    const from = ensureValidAddress(signedAuthorization.from, "from");
+    const to = ensureValidAddress(signedAuthorization.to, "to");
+    const validAfter = signedAuthorization.validAfter
+      ? unixTimeFromDate(signedAuthorization.validAfter)
+      : 0;
+    const validBefore = signedAuthorization.validBefore
+      ? unixTimeFromDate(signedAuthorization.validBefore)
+      : MAX_UINT256;
+    const nonce = bufferFromHexString(signedAuthorization.nonce);
+    const { v } = signedAuthorization;
+    const r = bufferFromHexString(signedAuthorization.r);
+    const s = bufferFromHexString(signedAuthorization.s);
+
+    const makeData = async (): Promise<string> => {
+      const decimals = await this.getDecimalPlaces();
+      const value = bnFromDecimalString(
+        signedAuthorization.amount,
+        decimals,
+        "amount"
+      );
+
+      return (
+        USDC_SELECTORS.transferWithAuthorization +
+        encodeABIParameters(
+          [
+            "address",
+            "address",
+            "uint256",
+            "uint256",
+            "uint256",
+            "bytes32",
+            "uint8",
+            "bytes32",
+            "bytes32",
+          ],
+          [from, to, value, validAfter, validBefore, nonce, v, r, s],
           false
         )
       );
@@ -235,11 +350,11 @@ export class USDC extends ERC20 {
 export interface SignPermitOptions {
   /** Spender's address */
   spender: string;
-  /** Allowance amount in decimal number (e.g. "0.1") */
+  /** Allowance amount as a decimal number in a string (e.g. "0.1") */
   allowance: string;
   /** Nonce for the permit (Default: fetch next permit nonce) */
   nonce?: number | null;
-  /** Deadline in unix time (Default: no deadline) */
+  /** Deadline (Default: no deadline) */
   deadline?: Date | null;
 }
 
@@ -248,12 +363,46 @@ export interface SignedPermit {
   owner: string;
   /** Spender's address */
   spender: string;
-  /** Allowance amount in decimal number (e.g. "0.1") */
+  /** Allowance amount as a decimal number in a string (e.g. "0.1") */
   allowance: string;
   /** Nonce for the permit */
   nonce: number;
-  /** Deadline in unix time (Omit for no deadline) */
-  deadline?: number | null;
+  /** Deadline (Default: no deadline) */
+  deadline?: Date | null;
+  /** v of the signature */
+  v: number;
+  /** r of the signature as a hexadecimal string */
+  r: string;
+  /** s of the signature as a hexadecimal string */
+  s: string;
+}
+
+export interface SignTransferAuthorizationOptions {
+  /** Recipient's address */
+  to: string;
+  /** Amount to transfer as a decimal number in a string (e.g. "0.1") */
+  amount: string;
+  /** The time after which this is valid (Default: no limit) */
+  validAfter?: Date | null;
+  /** The time before which this is valid (Default: no limit) */
+  validBefore?: Date | null;
+  /** Unique 32-byte nonce as a hexadecimal string (Default: random nonce) */
+  nonce?: string | null;
+}
+
+export interface SignedTransferAuthorization {
+  /** Sender's address */
+  from: string;
+  /** Recipient's address */
+  to: string;
+  /** Amount to transfer as a decimal number in a string (e.g. "0.1") */
+  amount: string;
+  /** The time after which this is valid (Default: no limit) */
+  validAfter?: Date | null;
+  /** The time before which this is valid (Default: no limit) */
+  validBefore?: Date | null;
+  /** Unique 32-byte nonce as a hexadecimal string */
+  nonce: string;
   /** v of the signature */
   v: number;
   /** r of the signature as a hexadecimal string */
